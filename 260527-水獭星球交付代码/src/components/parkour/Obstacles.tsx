@@ -115,7 +115,7 @@ function ObstacleObject({ obstacle, playerPosRef, hitBurstId, softFocus, onHit, 
       {obstacle.variant === 2 && (
         <>
           {promptVisible && !softFocus && <pointLight color="#FFB732" intensity={1.7} distance={5} decay={1.5} />}
-          {promptVisible && !softFocus && <FloatingLabel text="撞一下箱子！" y={2.45} color="#FF9100" scale={0.25} />}
+          {promptVisible && !softFocus && <FloatingLabel text="撞一下箱子！" y={2.45} color="#FF9100" scale={0.07} />}
           {!softFocus && <QuestionBoxBadge />}
         </>
       )}
