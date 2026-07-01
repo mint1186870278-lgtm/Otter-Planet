@@ -49,8 +49,8 @@ export const TERRAIN_MATS = {
   roundLeaf:  { color: '#9EEA2F', roughness: 0.8,  metalness: 0 },
   // 松树冠（SpruceTreeLeaf.* 中位于高处的）— 青绿/teal，与圆树冷暖对比，奇幻森林感
   spruceLeaf: { color: '#18B982', roughness: 0.85, metalness: 0 },
-  // 地面草地（SpruceTreeLeaf.* 中贴地的大网格）— 黄绿，与树色明显区分
-  grass:      { color: '#8BDC32', roughness: 0.85, metalness: 0 },
+  // 地面草地（SpruceTreeLeaf.* 中贴地的大网格）— 指定色（浅黄绿）
+  grass:      { color: '#C2E282', roughness: 0.85, metalness: 0 },
   // 岩石 — 浅蓝灰，干净柔和，避免写实深灰
   rock:       { color: '#BFD2D8', roughness: 0.9,  metalness: 0 },
   // 石头路面 — 奶油暖黄，作为画面暖色锚点
@@ -58,8 +58,11 @@ export const TERRAIN_MATS = {
   // 云朵 — 偏冷白，干净
   cloud:      { color: '#EEF6FF', roughness: 1.0,  metalness: 0 },
 };
-// SpruceTreeLeaf 高度分流阈值（未缩放模型坐标）：贴地草地≈0.03、高处松树冠≈8.26，取中间值。
-export const SPRUCE_GROUND_MAX_Y = 3;
+// SpruceTreeLeaf 高度分流阈值（世界 Y 质心；box.setFromObject 已含 autoScale+offset）：
+// 2026-07 实测 scene-terrain-opt.glb —— 贴地草地("地形2"网格)世界 cy ≈ -4.2~-2.8，
+// 松树冠(SpruceTreeLeaf.00x)世界 cy ≈ 0.05~1.19，两者间隙约 2.86。取 -1 落在间隙正中偏下。
+// ⚠️旧值 3 高于所有网格 → 全部判成草地 → 松树与草地同色。改阈值前务必先跑 scripts/measure-terrain-heights.mjs。
+export const SPRUCE_GROUND_MAX_Y = -1;
 
 // 红花（地形内置纯红材质 #e70008 的网格，原本过大抢戏）整体缩放系数 → 降为稀有小点缀。
 export const RED_FLOWER_SCALE = 0.3;
@@ -69,8 +72,8 @@ export const RED_FLOWER_SCALE = 0.3;
 // 做色相渐变：近端(出生点侧,z 大)深青绿 → 远端(终点/树墙侧,z 小)浅蓝青、低对比，再叠加按 X 的
 // 轻微抖动打散「整片同色」。配合既有雾(远树更淡) → 近/中/远三档松树观感，不靠改模型。
 export const PINE_DEPTH = {
-  near:  '#2FD89A', // 近端：明亮青绿（提亮，去掉原来的暗沉）
-  far:   '#A7EBDD', // 远端：浅蓝青（更亮更蓝、低对比，融入雾色）
+  near:  '#63CB68', // 近端：松树冠指定色（草绿）
+  far:   '#63CB68', // 远端：同色（不再做近远色差，整片统一为指定色）
   zNear: 70,        // 世界 Z ≥ 此值 → 纯近端色
   zFar:  -30,       // 世界 Z ≤ 此值 → 纯远端色
   variation: 0.08,  // 按 X 的随机色相抖动幅度（加大，打散整片同色）

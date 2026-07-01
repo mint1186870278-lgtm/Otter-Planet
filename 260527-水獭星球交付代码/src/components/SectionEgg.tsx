@@ -8,8 +8,8 @@ const SUBMIT_URL = import.meta.env.VITE_EGG_SUBMIT_URL || '/api/otter-egg';
 // 演示模式：VITE_EGG_DEMO=true 时跳过真实请求，直接走 success（端点没好也能完整演示）
 const DEMO_MODE = import.meta.env.VITE_EGG_DEMO === 'true';
 
-// 蛋插画图位：把图放到 public/otter-egg.webp 即可自动启用；缺图时回退 emoji 🥚
-const EGG_IMG = '/otter-egg.webp';
+// 小水獭插画图位：把图放到 public/otter-baby.png 即可自动启用；缺图时回退 emoji 🥚
+const EGG_IMG = '/otter-baby.png';
 
 // 邮箱格式校验（仅英文版用；中文版留微信号不做格式校验）
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -30,11 +30,11 @@ export default function SectionEgg() {
   // 中英分流：两套文案非互译，按各自语境写（不是翻译）。「神秘惊喜」钩子团队待定，先留口子。
   const t = {
     zh: {
-      claim: '领取我的水獭蛋 🥚',
-      claimedTitle: '恭喜你领到了一只水獭蛋！',
-      claimedDesc: '它正在悄悄长大，总有一天会破壳哦～',
+      claim: '领取我的小水獭 🦦',
+      claimedTitle: '恭喜你领到了一只小水獭！',
+      claimedDesc: '它正在悄悄长大，会陪你去更多冒险哦～',
       // 留资前的引导：先抛出"期待后续版本吗"，点了才展开输入框
-      teaser: '期待看到水獭宝宝破壳、解锁更多冒险吗？\n后续新版本上线，第一时间想收到通知就点这里 👇',
+      teaser: '期待和小水獭一起解锁更多冒险吗？\n后续新版本上线，第一时间想收到通知就点这里 👇',
       teaserBtn: '我想看后续内容 ✨',
       // 注：团队后续可能加「填微信号有神秘惊喜」的钩子，现在先用朴实版，文案集中在此方便改。
       mailGuide: '留下你的微信号，我们会告诉你水獭宝宝的成长近况~',
@@ -46,13 +46,13 @@ export default function SectionEgg() {
       success: '记下啦！水獭宝宝的近况我们会通过微信告诉你 📬',
       fail: '提交失败，请稍后再试',
       retry: '重试',
-      skippedMsg: '没关系～水獭蛋已经是你的啦，它会慢慢长大的 🌱',
+      skippedMsg: '没关系～小水獭已经是你的啦，它会慢慢长大的 🌱',
     },
     en: {
-      claim: 'Claim your otter egg 🥚',
-      claimedTitle: 'You got a baby otter egg!',
-      claimedDesc: "It's quietly growing — one day it'll hatch!",
-      teaser: "Can't wait to see the otter hatch and unlock more adventures?\nTap here to be the first to know when the next version drops 👇",
+      claim: 'Claim your baby otter 🦦',
+      claimedTitle: 'You got a baby otter!',
+      claimedDesc: "It's quietly growing — soon it'll join you on more adventures!",
+      teaser: "Can't wait to unlock more adventures with your otter?\nTap here to be the first to know when the next version drops 👇",
       teaserBtn: 'Yes, keep me posted ✨',
       mailGuide: "Join our waiting list — leave your email to follow the baby otter's journey 💌",
       placeholder: 'Your email',
@@ -63,7 +63,7 @@ export default function SectionEgg() {
       success: "You're on the list! We'll send the baby otter's news to your inbox 📬",
       fail: 'Something went wrong, please try again',
       retry: 'Retry',
-      skippedMsg: "That's okay — the otter egg is yours, and it will keep growing 🌱",
+      skippedMsg: "That's okay — the baby otter is yours, and it will keep growing 🌱",
     },
   }[lang];
 
@@ -162,12 +162,12 @@ export default function SectionEgg() {
                 {eggImgOk ? (
                   <img
                     src={EGG_IMG}
-                    alt="otter egg"
+                    alt="little otter"
                     onError={() => setEggImgOk(false)}
                     className="w-40 h-40 md:w-56 md:h-56 object-contain"
                   />
                 ) : (
-                  <span className="text-[7rem] md:text-[10rem] leading-none">🥚</span>
+                  <span className="text-[7rem] md:text-[10rem] leading-none">🦦</span>
                 )}
               </motion.div>
             </motion.div>

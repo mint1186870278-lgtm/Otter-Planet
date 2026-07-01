@@ -12,6 +12,7 @@
     "lint": "tsc --noEmit",
     "test": "tsx src/lib/controlTutorial.test.ts && tsx src/lib/interactionHints.test.ts && tsx src/lib/fishAudio.test.ts",
     "optimize:terrain": "node scripts/optimize-terrain.mjs",
+    "optimize:terrain-tex": "node scripts/optimize-terrain-textures.mjs",
     "optimize:images": "node scripts/optimize-images.mjs"
   },
   "dependencies": {

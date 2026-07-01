@@ -141,11 +141,11 @@ const PICK_CARD_LABEL_BOTTOM = '6%'; // ⭐ 想调标签上下位置，只改这
 // 选图卡英文标签（id → 英文卡片名称）
 const PICK_CARD_LABELS: Record<string, { zh: string; en: string }> = {
   '1-1': { zh: 'kiwi',     en: 'Kiwi' },
-  '1-2': { zh: '月亮精灵', en: 'Moon Sprite' },
-  '1-3': { zh: '叽里咕噜', en: 'Jiligulu' },
+  '1-2': { zh: '叽里咕噜', en: 'Jiligulu' },
+  '1-3': { zh: '啄木鸟',   en: 'Woodpecker' },
   '2-1': { zh: '石头',     en: 'A Rock' },
-  '2-2': { zh: '月亮',     en: 'The Moon' },
-  '2-3': { zh: '叽里咕噜', en: 'Jiligulu' },
+  '2-2': { zh: '星星',     en: 'The Stars' },
+  '2-3': { zh: '贝壳',     en: 'A Shell' },
 };
 
 // 🎬 步骤机配置（11 步）──────────────────────────────────────────────────
@@ -349,6 +349,19 @@ export default function SectionVisualNovel({ onComplete }: { onComplete?: () => 
     stop: srStop,
     reset: srReset,
   } = useSpeechRecognition(lang === 'zh' ? 'zh-CN' : 'en-US');
+
+  // 语音题两个文字框的内部滚动容器：内容变长时自动滚到底，把长文字关在框里、不往外顶。
+  // recogScrollRef=录音态语音条识别稿；aiScrollRef=松手后 AI 回复气泡。只服务语音步(④⑩)。
+  const recogScrollRef = useRef<HTMLDivElement>(null);
+  const aiScrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = recogScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight; // 识别稿每新增一段 → 滚到最新
+  }, [recognizedText]);
+  useEffect(() => {
+    const el = aiScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight; // AI 流式回复每蹦一字 → 滚到最新
+  }, [displayedDialogText, voiceAnswering]);
 
   // 语音不可用时按麦克风才弹的友好提示文案（3s 自动消失，见 showVoiceHint）。
   // 静态原因(unsupported/insecure)优先；否则按运行时被拒(srDenied)给"麦克风被挡住"。
@@ -771,10 +784,16 @@ export default function SectionVisualNovel({ onComplete }: { onComplete?: () => 
                    className="w-full object-contain"
                    style={{ marginTop: '-18.2%', marginBottom: '-22.5%' }}
                  />
-                 <span className={`absolute inset-0 flex items-center justify-center px-[8%] text-center font-bold leading-tight ${recognizedText ? 'text-otter-text text-2xl md:text-3xl' : 'text-otter-text/40 text-base md:text-lg'}`}>
-                   {recognizedText || (lang === 'zh' ? '点下面麦克风说话吧～' : 'Tap the mic below to talk~')}
-                   {isRecording && <span className="animate-pulse">▍</span>}
-                 </span>
+                 {/* 识别稿：外层居中(短文字仍居中)，内层限高可滚(长文字在框内向下滚、自动到底)，不再外溢。 */}
+                 <div className="absolute left-0 right-0 bottom-0 top-[3px] flex items-center justify-center px-[8%]">
+                   <div
+                     ref={recogScrollRef}
+                     className={`max-h-full overflow-y-auto text-center font-bold leading-tight [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${recognizedText ? 'text-otter-text text-xl md:text-2xl' : 'text-otter-text/40 text-base md:text-lg'}`}
+                   >
+                     {recognizedText || (lang === 'zh' ? '点下面麦克风说话吧～' : 'Tap the mic below to talk~')}
+                     {isRecording && <span className="animate-pulse">▍</span>}
+                   </div>
+                 </div>
                </div>
                {/* 麦克风：push-to-talk（按住录音，松开自动发送） */}
                <button
@@ -920,11 +939,15 @@ export default function SectionVisualNovel({ onComplete }: { onComplete?: () => 
            ) : voiceAnswering ? (
              /* 语音答完态(④⑩)·AI 回复气泡：AI 整句回复用「中等字号」显示(区别于短 talk 句的超大字)， */
              /* 自然换行(不走 wrapCJK 的6字硬折)，配流式光标。修复「AI回复大字闪现/大→小跳变」。 */
-             <div className="absolute left-[9%] right-[9%] top-[13%] bottom-[20%] flex items-center justify-center text-center text-xl md:text-2xl lg:text-3xl font-bold leading-snug text-otter-text whitespace-pre-line">
-               <span>
+             /* 外层定位区居中(短回复仍居中)；内层顶对齐限高可滚(长回复在气泡内向下滚、自动到底)，不再上下外溢。 */
+             <div className="absolute left-[9%] right-[9%] top-[13%] bottom-[20%] flex items-center justify-center">
+               <div
+                 ref={aiScrollRef}
+                 className="max-h-full overflow-y-auto text-center text-lg md:text-xl lg:text-2xl font-bold leading-snug text-otter-text whitespace-pre-line [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+               >
                  {displayedDialogText}
                  {isStreaming && <span className="animate-pulse">▍</span>}
-               </span>
+               </div>
              </div>
            ) : (
              /* 普通步(talk/affirm)：文字绝对定位于气泡身体(14%~78%)，flex 居中。result 步走上面专属结算分支。 */
