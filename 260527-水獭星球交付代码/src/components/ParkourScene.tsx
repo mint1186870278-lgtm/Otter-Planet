@@ -5,11 +5,19 @@ import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 // 非组件的常量/类型/工具已抽到 parkourConstants.ts —— 让本文件只导出组件，保住 Fast Refresh 边界。
 import {
-  ACTOR_SCALE, STAR_SCALE, SHOW_COORDS, STAR_POSITIONS, CREEK_STAR_POSITIONS,
-  creekStarsAsCollectibles,
+  ACTOR_SCALE, SHOW_COORDS, STAR_POSITIONS, CREEK_STAR_POSITIONS,
+  creekStarsAsCollectibles, PK, TERRAIN_SIZE,
+  NPC_URLS, NPC_SCALES, NPC_ROTATIONS, NPC_POSITIONS,
   type Vec2, type NpcPos, type DebugInfo, type WorldPrompt, type SkyPhase,
   type StaticCollectible, type CreekStarPos,
 } from './parkourConstants';
+// 共享运行时（模块级可变 ref / 单例射线 / 地面吸附）与 3D 小部件、障碍子系统均已拆分。
+import {
+  occluderRef, playerYRef, snapGroundY,
+  _terrainCaster, _terrainDown, _terrainOrigin,
+} from './parkour/runtime';
+import { StarMesh, FloatingLabel, TeachingPointer, StarGuideMarker } from './parkour/widgets';
+import { ObstacleField, type ActiveObstacle } from './parkour/Obstacles';
 
 // ════════════════════════════════════════════════════════════════
 //  VISUAL CONFIG — 所有画质参数集中在这里，方便手动微调
@@ -121,7 +129,6 @@ const FLOWER_GLB = {
   plant:  { url: PLANT_GREEN_URL,   count: 80, scale: [0.50, 0.80] as [number, number] },
 };
 
-const PK = '/parkour-3d/kenney_platformer-kit/Models/GLB-format';
 const TERRAIN_URL = '/model-site/scene-terrain-opt.glb?v=20260624-terrain';
 // 程序化散布的额外树林模型（让场景从「公园」变「森林」）：圆树 + 灌木。
 // optimized/ 版：原模型每棵 22~27 万顶点 + 4 张 2K 贴图(89MB显存/个) → 95 棵严重卡。
@@ -143,20 +150,11 @@ const HEIGHT_SPLIT_Y = 1.2; // 世界 Y 质心阈值（castShadow 判断用）
 
 const DEBUG_MODE = false;
 
-// 相机遮挡体：terrain（树/石/地面）挂到这里，供相机每帧射线检测——
-// 被树挡住主角时把相机拉到树前，主角始终可见。由 TerrainModel 挂载时赋值。
-const occluderRef: { current: THREE.Object3D | null } = { current: null };
-// 地形跟随后主角的真实世界 Y，供 CameraRig 用（让相机始终在玩家正上方固定高度，不贴地）
-const playerYRef: { current: number } = { current: 0 };
-
 const PLAYER_START: Vec2 = { x: -2.52, z: 111.68 }; // 出生点（用户调试面板确认过的位置）
 // 地形对齐锚点：把"步道最近端"对到这个世界点。⚠️必须独立于 PLAYER_START——
 // 否则改出生点时地形会跟着挪、角色永远黏在入口，等于没改。保持 (0,112) 即维持当前地形摆放，
 // 让 PLAYER_START 可以自由设到路上任意一点（如本例的入口前方更居中处）。
 const TERRAIN_ANCHOR_TO: Vec2 = { x: 0, z: 112 };
-const TERRAIN_SIZE = 240; // 地形边长，中心在原点，x/z ∈ [-120,120]。
-// ⚠️ 不要改这个数来"放大世界"！所有星星/NPC/散布树/花草坐标都写死在 240 尺度，
-//    改大它只放大地形网格、摆件留在旧小圈 → 树缩成小岛、星星悬空。要放大世界用 ACTOR_SCALE。
 // 地形落位微调（世界单位）。默认 0：代码已自动把"步道最近端"对齐到出生点并抬到脚底高度。
 const TERRAIN_X_OFFSET = 0;
 const TERRAIN_Y_OFFSET = 0;
@@ -383,10 +381,7 @@ function Cloud({ pos, spd }: { pos: [number, number, number]; spd: number }) {
 
 // ── character — 真实世界坐标移动 + 朝向随移动方向翻转 ─────────────────────────
 // Character 是唯一写 playerPosRef 的组件（每帧积分 velocityRef）；其它组件只读。
-// 地形跟随 — 共享 raycaster 对象，避免每帧分配
-const _terrainCaster = new THREE.Raycaster();
-const _terrainDown   = new THREE.Vector3(0, -1, 0);
-const _terrainOrigin = new THREE.Vector3();
+// 地形跟随的共享 raycaster 已移到 parkour/runtime.ts（_terrainCaster / _terrainDown / _terrainOrigin）。
 
 function Character({ velocityRef, playerPosRef, hitEffect, debugYRef }: {
   velocityRef: React.RefObject<Vec2>;
@@ -585,133 +580,8 @@ function Character({ velocityRef, playerPosRef, hitEffect, debugYRef }: {
 // ── stars — 钥匙，钉死世界坐标 {x,z}，2D 平面距离收集 ─────────────────────────
 // StaticCollectible 类型 + STAR_POSITIONS 星位数据已移到 parkourConstants.ts（想调星星位置去那里改）。
 
-function StarMesh() {
-  const { scene } = useGLTF(`${PK}/star.glb`);
-  const ref = useRef<THREE.Group>(null!);
-  useFrame((_s, d) => { if (ref.current) ref.current.rotation.y += d * 2; });
-  return <primitive ref={ref} object={scene.clone()} scale={STAR_SCALE} />;
-}
-
-function FloatingLabel({ text, y = 2.8, color = '#FF9100', scale = 1 }: { text: string; y?: number; color?: string; scale?: number }) {
-  return (
-    <group position={[0, y, 0]} scale={scale}>
-      <mesh>
-        <planeGeometry args={[3.6, 0.8]} />
-        <meshBasicMaterial color="white" transparent opacity={0.94} depthWrite={false} />
-      </mesh>
-      <mesh position={[-1.64, -0.38, 0.01]} rotation={[0, 0, Math.PI / 4]}>
-        <planeGeometry args={[0.32, 0.32]} />
-        <meshBasicMaterial color="white" transparent opacity={0.94} depthWrite={false} />
-      </mesh>
-      <mesh position={[-1.38, 0, 0.02]}>
-        <circleGeometry args={[0.12, 18]} />
-        <meshBasicMaterial color={color} transparent opacity={0.95} depthWrite={false} />
-      </mesh>
-      <TextSprite text={text} color={color} />
-    </group>
-  );
-}
-
-function TextSprite({ text, color, scale = [2.8, 0.7, 1], position = [0.18, 0, 0.04] }: {
-  text: string;
-  color: string;
-  scale?: [number, number, number];
-  position?: [number, number, number];
-}) {
-  const texture = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d')!;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'bold 44px Nunito, system-ui, sans-serif';
-    ctx.fillStyle = color;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 2);
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.needsUpdate = true;
-    return tex;
-  }, [text, color]);
-
-  useEffect(() => () => texture.dispose(), [texture]);
-
-  return (
-    <sprite position={position} scale={scale}>
-      <spriteMaterial map={texture} transparent depthWrite={false} />
-    </sprite>
-  );
-}
-
-function QuestionBoxBadge() {
-  return (
-    <group position={[0, 0.86, 0]} scale={0.4}>
-      <mesh>
-        <circleGeometry args={[0.48, 32]} />
-        <meshBasicMaterial color="#FFFFFF" transparent opacity={0.96} depthWrite={false} />
-      </mesh>
-      <TextSprite text="?" color="#FF9100" scale={[0.78, 0.78, 1]} position={[0, 0, 0.04]} />
-    </group>
-  );
-}
-
-function TeachingPointer({ y = 3.55 }: { y?: number }) {
-  const ref = useRef<THREE.Group>(null!);
-  const texture = useMemo(() => new THREE.CanvasTexture(makePointerCanvas()), []);
-  useEffect(() => () => texture.dispose(), [texture]);
-  useFrame((st) => {
-    if (!ref.current) return;
-    const pulse = Math.sin(st.clock.elapsedTime * 5);
-    ref.current.position.y = y + Math.max(0, pulse) * 0.2;
-    ref.current.scale.setScalar(1 + Math.max(0, pulse) * 0.12);
-  });
-  return (
-    <group ref={ref} position={[0.95, y, 0]}>
-      <sprite scale={[0.78, 0.78, 1]}>
-        <spriteMaterial map={texture} transparent depthWrite={false} />
-      </sprite>
-    </group>
-  );
-}
-
-function StarGuideMarker() {
-  const ref = useRef<THREE.Group>(null!);
-  useFrame((st) => {
-    if (!ref.current) return;
-    const bob = Math.sin(st.clock.elapsedTime * 3.5);
-    ref.current.position.y = 4.25 + bob * 0.22;
-    ref.current.rotation.y = st.clock.elapsedTime * 0.8;
-  });
-
-  return (
-    <group ref={ref} position={[0, 4.25, 0]}>
-      <mesh rotation={[Math.PI, 0, 0]}>
-        <coneGeometry args={[0.52, 1.05, 4]} />
-        <meshBasicMaterial color="#FF9100" transparent opacity={0.62} depthWrite={false} />
-      </mesh>
-      <mesh position={[0, 0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.62, 0.86, 32]} />
-        <meshBasicMaterial color="#FFE45C" transparent opacity={0.42} depthWrite={false} />
-      </mesh>
-      <pointLight color="#FFE45C" intensity={2.4} distance={6} decay={1.8} />
-    </group>
-  );
-}
-
-const pointerCanvasCache: HTMLCanvasElement[] = [];
-function makePointerCanvas() {
-  if (pointerCanvasCache[0]) return pointerCanvasCache[0];
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d')!;
-  ctx.font = '88px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('☝', 64, 66);
-  pointerCanvasCache[0] = canvas;
-  return canvas;
-}
+// 共享 3D 小部件（StarMesh / FloatingLabel / TextSprite / QuestionBoxBadge /
+// TeachingPointer / StarGuideMarker / makePointerCanvas）已移到 parkour/widgets.tsx。
 
 function StarObject({ item, playerPosRef, focus, guide, softFocus, onCollect, onPromptChange }: {
   item: StaticCollectible;
@@ -832,228 +702,11 @@ function StarsGroup({ collected, playerPosRef, focusStarId, guideStarId, softFoc
   );
 }
 
-// ── obstacles — 玩家周围动态刷新（不再固定布置）──────────────────────────────
-// 在玩家移动方向前方的扇形区域随机刷障碍，跑过去的回收，始终维持 ~10 个活跃。
-// 碰到触发红屏（带迟滞防重复）。生成时避开星星/NPC，不盖道具。
-type ActiveObstacle = { id: number; variant: 0 | 1 | 2; x: number; z: number };
-
-const OB_TARGET = 10;       // 维持的活跃障碍数（少于此值就补）
-const OB_MAX_PER_TICK = 2;  // 每次生成节流：单 tick 最多补几个，避免一帧涌出
-const OB_TICK = 0.25;       // 生成节流间隔（秒）
-const OB_SPAWN_MIN = 15 * ACTOR_SCALE;    // 生成最近距离（太近会怼脸）
-const OB_SPAWN_MAX = 30 * ACTOR_SCALE;    // 生成最远距离（太远看不见）
-const OB_RECYCLE = 40 * ACTOR_SCALE;      // 超出此距离即回收（已跑过去）
-const OB_SPREAD = Math.PI / 3; // 朝向前方的扇形半角（±60°）
-const OB_CLEAR = 3 * ACTOR_SCALE;         // 与星星/NPC/其它障碍的最小间距（小于则换点重选）
-
-function RocksModel() {
-  const { scene } = useGLTF(`${PK}/rocks.glb`);
-  return <primitive object={scene.clone()} scale={0.288} />;
-}
-function BarrelModel() {
-  const { scene } = useGLTF(`${PK}/barrel.glb`);
-  return <primitive object={scene.clone()} scale={0.256} />;
-}
-function CrateModel() {
-  const { scene } = useGLTF(`${PK}/crate.glb`);
-  return <primitive object={scene.clone()} scale={0.256} />;
-}
-
-// 障碍物复用的射线，模块级单例避免每次 mount 分配
-const _obstacleCaster = new THREE.Raycaster();
-const _obstacleOrigin = new THREE.Vector3();
-const _obstacleDown   = new THREE.Vector3(0, -1, 0);
-
-function ObstacleObject({ obstacle, playerPosRef, hitBurstId, softFocus, onHit, onPromptChange }: {
-  obstacle: ActiveObstacle;
-  playerPosRef: React.RefObject<Vec2>;
-  hitBurstId: number | null;
-  softFocus: boolean;
-  onHit: (id: number, variant: ActiveObstacle['variant'], position: Vec2) => void;
-  onPromptChange: (prompt: WorldPrompt) => void;
-}) {
-  const groupRef = useRef<THREE.Group>(null!);
-  const inRange = useRef(false); // 冷却：进入范围触发一次，离开后才能再触发
-  const HIT_RANGE = 1.2 * ACTOR_SCALE;
-  const PROMPT_RANGE = obstacle.variant === 2 ? 5.2 * ACTOR_SCALE : 0;
-  const promptedRef = useRef(false);
-  const [shakeUntil, setShakeUntil] = useState(0);
-  const [promptVisible, setPromptVisible] = useState(false);
-
-  // 生成时吸附到真实地面高度，避免在斜坡上浮空或陷地
-  useEffect(() => {
-    const terrain = occluderRef.current;
-    if (!terrain || !groupRef.current) return;
-    _obstacleOrigin.set(obstacle.x, 50, obstacle.z);
-    _obstacleCaster.set(_obstacleOrigin, _obstacleDown);
-    _obstacleCaster.far = 100;
-    const hits = _obstacleCaster.intersectObject(terrain, true);
-    const groundY = snapGroundY(hits);
-    groupRef.current.position.y = groundY;
-  }, [obstacle.x, obstacle.z]);
-
-  useEffect(() => {
-    if (hitBurstId === obstacle.id) setShakeUntil(Date.now() + 320);
-  }, [hitBurstId, obstacle.id]);
-
-  useEffect(() => () => {
-    if (promptedRef.current) onPromptChange(null);
-  }, [onPromptChange]);
-
-  useFrame((st) => {
-    if (groupRef.current) {
-      const breathe = obstacle.variant === 2 ? 1 + Math.sin(st.clock.elapsedTime * 3.2 + obstacle.id) * 0.07 : 1;
-      groupRef.current.scale.setScalar(breathe * (softFocus ? 0.72 : 1));
-      if (Date.now() < shakeUntil) {
-        groupRef.current.position.x = obstacle.x + Math.sin(st.clock.elapsedTime * 70) * 0.18;
-      } else {
-        groupRef.current.position.x = obstacle.x;
-      }
-    }
-    const p = playerPosRef.current;
-    const dx = p.x - obstacle.x;
-    const dz = p.z - obstacle.z;
-    const dist2 = dx * dx + dz * dz;
-    if (!softFocus && obstacle.variant === 2 && dist2 < PROMPT_RANGE * PROMPT_RANGE) {
-      if (!promptedRef.current) {
-        promptedRef.current = true;
-        setPromptVisible(true);
-        onPromptChange({ kind: 'box', id: obstacle.id, text: '撞一下箱子！', position: { x: obstacle.x, z: obstacle.z } });
-      }
-    } else if (promptedRef.current) {
-      promptedRef.current = false;
-      setPromptVisible(false);
-      onPromptChange(null);
-    }
-    const hit = dist2 < HIT_RANGE * HIT_RANGE;
-    if (hit && !inRange.current) {
-      inRange.current = true;
-      onHit(obstacle.id, obstacle.variant, { x: obstacle.x, z: obstacle.z });
-    } else if (!hit && inRange.current) {
-      inRange.current = false;
-    }
-  });
-
-  return (
-    <group ref={groupRef} position={[obstacle.x, 0, obstacle.z]}>
-      {obstacle.variant === 2 && (
-        <>
-          {promptVisible && !softFocus && <pointLight color="#FFB732" intensity={1.7} distance={5} decay={1.5} />}
-          {promptVisible && !softFocus && <FloatingLabel text="撞一下箱子！" y={2.45} color="#FF9100" scale={0.25} />}
-          {!softFocus && <QuestionBoxBadge />}
-        </>
-      )}
-      {obstacle.variant === 0 && <RocksModel />}
-      {obstacle.variant === 1 && <BarrelModel />}
-      {obstacle.variant === 2 && <CrateModel />}
-    </group>
-  );
-}
-
-// 动态障碍管理器：每帧回收远处、按节流补生成，维持 OB_TARGET 个。
-// 生成点在玩家「移动方向（静止则默认 -z 前进方向）」前方扇形内，避开星星/NPC/其它障碍。
-function ObstacleField({ velocityRef, playerPosRef, hitBurstId, softFocus, onHit, onPromptChange, paused }: {
-  velocityRef: React.RefObject<Vec2>;
-  playerPosRef: React.RefObject<Vec2>;
-  hitBurstId: number | null;
-  softFocus: boolean;
-  onHit: (id: number, variant: ActiveObstacle['variant'], position: Vec2) => void;
-  onPromptChange: (prompt: WorldPrompt) => void;
-  paused: boolean;
-}) {
-  const [obstacles, setObstacles] = useState<ActiveObstacle[]>([]);
-  const nextId = useRef(0);
-  const tickAccum = useRef(0);
-  // 当前活跃障碍坐标的镜像，供生成时做"不要太近"检测（避免读 state 闭包过期）
-  const liveRef = useRef<ActiveObstacle[]>([]);
-  liveRef.current = obstacles;
-
-  useFrame((_s, d) => {
-    if (paused) return;
-    const p = playerPosRef.current;
-
-    // 1) 回收：跑过去（超出 OB_RECYCLE）的障碍销毁，腾名额
-    const kept = liveRef.current.filter(o => {
-      const dx = o.x - p.x, dz = o.z - p.z;
-      return dx * dx + dz * dz <= OB_RECYCLE * OB_RECYCLE;
-    });
-    let changed = kept.length !== liveRef.current.length;
-
-    // 2) 生成节流：累计到 OB_TICK 才尝试补，单次最多 OB_MAX_PER_TICK 个
-    tickAccum.current += d;
-    const toAdd: ActiveObstacle[] = [];
-    if (tickAccum.current >= OB_TICK) {
-      tickAccum.current = 0;
-      const deficit = OB_TARGET - kept.length;
-      const spawnCount = Math.min(OB_MAX_PER_TICK, Math.max(0, deficit));
-
-      // 朝向：移动方向；静止时默认 -z（前进方向）
-      const vel = velocityRef.current;
-      const moving = Math.hypot(vel.x, vel.z) > 0.01;
-      const baseAng = moving ? Math.atan2(vel.x, vel.z) : Math.PI; // 与角色 heading 同公式
-      const lim = TERRAIN_SIZE / 2 - 4;
-
-      for (let n = 0; n < spawnCount; n++) {
-        let placed: ActiveObstacle | null = null;
-        for (let attempt = 0; attempt < 8; attempt++) {
-          const ang = baseAng + (Math.random() * 2 - 1) * OB_SPREAD;
-          const dist = OB_SPAWN_MIN + Math.random() * (OB_SPAWN_MAX - OB_SPAWN_MIN);
-          const x = THREE.MathUtils.clamp(p.x + Math.sin(ang) * dist, -lim, lim);
-          const z = THREE.MathUtils.clamp(p.z + Math.cos(ang) * dist, -lim, lim);
-          // 避让：星星 / NPC / 已有障碍（含本 tick 刚加的）都不能太近
-          const tooClose =
-            STAR_POSITIONS.some(s => (s.x - x) ** 2 + (s.z - z) ** 2 < OB_CLEAR * OB_CLEAR) ||
-            NPC_POSITIONS.some(npc => (npc.x - x) ** 2 + (npc.z - z) ** 2 < OB_CLEAR * OB_CLEAR) ||
-            kept.some(o => (o.x - x) ** 2 + (o.z - z) ** 2 < OB_CLEAR * OB_CLEAR) ||
-            toAdd.some(o => (o.x - x) ** 2 + (o.z - z) ** 2 < OB_CLEAR * OB_CLEAR);
-          if (tooClose) continue;
-          placed = { id: nextId.current++, variant: (Math.floor(Math.random() * 3) as 0 | 1 | 2), x, z };
-          break;
-        }
-        if (placed) toAdd.push(placed);
-      }
-      if (toAdd.length) changed = true;
-    }
-
-    if (changed) setObstacles([...kept, ...toAdd]);
-  });
-
-  return (
-    <>
-      {obstacles.map(obs => (
-        <React.Suspense key={obs.id} fallback={null}>
-          <ObstacleObject
-            obstacle={obs}
-            playerPosRef={playerPosRef}
-            hitBurstId={hitBurstId}
-            softFocus={softFocus}
-            onHit={onHit}
-            onPromptChange={prompt => {
-              if (!prompt || prompt.id === obs.id) onPromptChange(prompt);
-            }}
-          />
-        </React.Suspense>
-      ))}
-    </>
-  );
-}
+// obstacles 子系统（ActiveObstacle / OB_* / RocksModel / BarrelModel / CrateModel /
+//   ObstacleObject / ObstacleField）已移到 parkour/Obstacles.tsx。
 
 // ── NPCs — 钉死世界坐标，走近半径触发（带迟滞，离开后可再触发）────────────────
-const NPC_URLS = [
-  '/npc-model/woodpecker.glb',
-  '/npc-model/kiwi.glb',
-  '/npc-model/jiligulu.glb',
-] as const;
-const NPC_SCALES = [2.5, 1.0, 1.0] as const;
-const NPC_ROTATIONS = [Math.PI, 0, 0] as const;
-// 每段之后一个 NPC。
-// 🐦 想自己调 NPC 位置：直接改下面的 x（左负右正）/ z（越大越近出生点、越小越远）。
-// 三个 NPC 都放在路中线附近、间距拉开，避免卡进树丛或彼此太近。
-const NPC_POSITIONS: NpcPos[] = [
-  { x: -0.30, y: -0.25, z: 107.00 }, // NPC1 啄木鸟
-  { x: -3.20, y: -0.15, z: 102.10 }, // NPC2 kiwi
-  { x: -2.80, y: -0.20, z:  95.90 }, // NPC3 叽里咕噜
-];
+// NPC_URLS / NPC_SCALES / NPC_ROTATIONS / NPC_POSITIONS（模型/缩放/朝向/坐标）已移到 parkourConstants.ts。
 
 // ── 程序化树林散布 ──────────────────────────────────────────────────────────
 // 老板说「像公园不像森林」→ 用代码把 3d-tree 的圆树/灌木散布开，密度约现在 2 倍：
@@ -1307,19 +960,7 @@ const GROUND_DETAIL_SCATTER: GroundItem[] = (() => {
   return items;
 })();
 
-// 从向下射线的命中里挑「真正的地面顶面」高度。
-// ⚠️ 关键坑：地形组里烤进了树冠(y≈8)和云(y≈26~43)，命中按距离从近到远(=从高到低)排序，
-//    直接取 hits[0] 会把花吸到树顶/云里 → 地面没花、半空一堆。改为从【低到高】找第一个
-//    低于 GROUND_SNAP_MAX_Y 的命中，即跳过树冠/云、落到真实地面。找不到则回退最低命中或 0。
-const GROUND_SNAP_MAX_Y = 4; // 地面顶面高度上限（草地/石板都在此以下；树冠/云远高于此）
-function snapGroundY(hits: THREE.Intersection[]): number {
-  if (!hits.length) return 0;
-  // 命中默认按距离升序（从高到低）。从最低开始找第一个 ≤ 阈值的，即地面。
-  for (let i = hits.length - 1; i >= 0; i--) {
-    if (hits[i].point.y <= GROUND_SNAP_MAX_Y) return hits[i].point.y;
-  }
-  return hits[hits.length - 1].point.y; // 全在阈值之上（罕见）→ 取最低那个
-}
+// 地面吸附工具 snapGroundY（+ GROUND_SNAP_MAX_Y）已移到 parkour/runtime.ts。
 
 // 一类地面细节 = 一个 InstancedMesh（共享 geometry+material）。地形就绪后射线吸附到真实地面高度。
 function InstancedGroundDetail({ geometry, material, items }: {

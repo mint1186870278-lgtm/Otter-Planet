@@ -10,6 +10,9 @@
 
 export const SHOW_COORDS = false;
 
+// 障碍物 glb 资源根目录（石头/木桶/箱子）。放这里供 ParkourScene 与拆分出的 Obstacles 子系统共用。
+export const PK = '/parkour-3d/kenney_platformer-kit/Models/GLB-format';
+
 // ── 演员层总缩放 ────────────────────────────────────────────────────────────
 // 「森林显得大」本质是「熊 ÷ 树」比例问题：不动地形（动它会让石板路变形、星星/NPC
 // 掉出路面），而是把所有「演员」（主角 + 星星 + NPC + 障碍 + 假月亮）按此系数整体缩小，
@@ -88,4 +91,26 @@ export const STAR_POSITIONS: StaticCollectible[] = [
   { id: 13, type: 'star', x: -11, z: -22 }, // 保险星：填 -14→-31 空当
   { id: 7, type: 'star', x: -12, z: -14 },
   { id: 8, type: 'star', x: -8, z: -31 },
+];
+
+// 地形边长，中心在原点，x/z ∈ [-120,120]。
+// ⚠️ 不要改这个数来"放大世界"！所有星星/NPC/散布树/花草坐标都写死在 240 尺度，
+//    改大它只放大地形网格、摆件留在旧小圈 → 树缩成小岛、星星悬空。要放大世界用 ACTOR_SCALE。
+export const TERRAIN_SIZE = 240;
+
+// ── NPC 配置（模型 / 缩放 / 朝向 / 世界坐标）─────────────────────────────────
+export const NPC_URLS = [
+  '/npc-model/woodpecker.glb',
+  '/npc-model/kiwi.glb',
+  '/npc-model/jiligulu.glb',
+] as const;
+export const NPC_SCALES = [2.5, 1.0, 1.0] as const;
+export const NPC_ROTATIONS = [Math.PI, 0, 0] as const;
+// 每段之后一个 NPC。
+// 🐦 想自己调 NPC 位置：直接改下面的 x（左负右正）/ z（越大越近出生点、越小越远）。
+// 三个 NPC 都放在路中线附近、间距拉开，避免卡进树丛或彼此太近。
+export const NPC_POSITIONS: NpcPos[] = [
+  { x: -0.30, y: -0.25, z: 107.00 }, // NPC1 啄木鸟
+  { x: -3.20, y: -0.15, z: 102.10 }, // NPC2 kiwi
+  { x: -2.80, y: -0.20, z:  95.90 }, // NPC3 叽里咕噜
 ];
