@@ -1,0 +1,6 @@
+{
+  "name": "水獭星球 (Otter Planet) - Game UI Mockup",
+  "description": "Children's educational web game UI mockup featuring 5 scrollable sections.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

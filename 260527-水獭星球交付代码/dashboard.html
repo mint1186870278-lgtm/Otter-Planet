@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>水獭星球 · 数据看板</title>
+<!--
+  水獭星球 · 埋点数据展示后台（单文件，零构建）
+  ─────────────────────────────────────────────
+  用法：直接双击本文件用浏览器打开即可（后端已开 CORS，可跨域直连）。
+        也可以扔到服务器任意位置当静态页访问。
+
+  配置：下方 API_BASE 是后端地址。若后端换了地址/端口，只改这一行。
+        若以后想让本页和后端同源部署、走相对路径，把 API_BASE 改成空字符串 '' 即可。
+
+  图表：用 CDN 引入 Chart.js。若部署环境没有外网（CDN 拉不到），
+        图表会自动降级成纯 CSS 柱状图，数据照样能看，不影响使用。
+
+  访问控制：当前无密码。若以后要加，建议在后端给这些接口加 basic auth 或 token，
+            前端这层加密码只是防君子不防小人。
+-->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --orange: #ff9100;
+    --orange-dark: #cc7400;
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --text: #2b2b3a;
+    --muted: #8a8a9a;
+    --border: #e7e8ef;
+    --blue: #4a90d9;
+    --green: #34c759;
+    --shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 24px 60px; }
+
+  /* 顶部栏 */
+  .topbar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 0 20px; flex-wrap: wrap;
+  }
+  .topbar h1 { font-size: 22px; margin: 0; font-weight: 700; }
+  .topbar .sub { color: var(--muted); font-size: 13px; }
+  .topbar .spacer { flex: 1; }
+  .btn {
+    background: var(--orange); color: #fff; border: none;
+    padding: 8px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    cursor: pointer; box-shadow: 0 3px 0 var(--orange-dark); transition: all .12s;
+  }
+  .btn:hover { background: #ffa733; }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--orange-dark); }
+  .btn.busy { opacity: .6; pointer-events: none; }
+
+  /* 语言切换 */
+  .lang-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; background: #fff; }
+  .lang-btn {
+    border: none; background: #fff; color: var(--muted); cursor: pointer;
+    padding: 7px 12px; font-size: 13px; font-weight: 600; transition: all .12s;
+  }
+  .lang-btn + .lang-btn { border-left: 1px solid var(--border); }
+  .lang-btn.active { background: var(--orange); color: #fff; }
+
+  /* 来源切换 navbar */
+  .srcnav { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 4px; }
+  .src-btn {
+    border: 1px solid var(--border); background: #fff; color: var(--text);
+    padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .12s;
+  }
+  .src-btn:hover { border-color: var(--orange); }
+  .src-btn.active { background: var(--orange); color: #fff; border-color: var(--orange); }
+
+  /* 区块标题 */
+  .section-title { font-size: 16px; font-weight: 700; margin: 28px 0 14px; }
+
+  /* 卡片区 */
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 960px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+  .card {
+    background: var(--card); border-radius: 14px; padding: 16px 18px;
+    box-shadow: var(--shadow); border: 1px solid var(--border);
+  }
+  .card .label { color: var(--muted); font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .card .value { font-size: 28px; font-weight: 800; line-height: 1.1; }
+  .card .value .unit { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+  .card .sub { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .card.hl { background: linear-gradient(135deg, #fff7ec, #ffffff); border-color: #ffe0b8; }
+  .card.hl .value { color: var(--orange-dark); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  /* 图表区 */
+  .charts { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
+  @media (max-width: 960px) { .charts { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--card); border-radius: 14px; padding: 18px;
+    box-shadow: var(--shadow); border: 1px solid var(--border);
+  }
+  .panel h3 { margin: 0 0 14px; font-size: 15px; }
+  .chart-box { position: relative; height: 280px; }
+
+  /* CSS 降级柱状图 */
+  .css-bars { display: flex; flex-direction: column; gap: 10px; }
+  .css-bar-row { display: grid; grid-template-columns: 90px 1fr 48px; align-items: center; gap: 10px; }
+  .css-bar-row .nm { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .css-bar-track { background: #eef0f6; border-radius: 6px; height: 18px; overflow: hidden; }
+  .css-bar-fill { background: var(--orange); height: 100%; border-radius: 6px; transition: width .4s; }
+  .css-bar-row .ct { text-align: right; font-size: 13px; font-weight: 600; color: var(--muted); }
+
+  /* 表格区 */
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .toolbar input, .toolbar select {
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; background: #fff; color: var(--text); outline: none;
+  }
+  .toolbar input:focus, .toolbar select:focus { border-color: var(--orange); }
+  .toolbar .lbl { color: var(--muted); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; background: #fafbfd; position: sticky; top: 0; }
+  td { vertical-align: top; }
+  tr:hover td { background: #fafbfd; }
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+  .mono { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 12px; color: var(--muted); }
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    background: #eef2fb; color: var(--blue);
+  }
+  .tag.zh { background: #fdeee0; color: var(--orange-dark); }
+  .tag.en { background: #e6f6ec; color: #1d9b50; }
+  .link { color: var(--blue); cursor: pointer; text-decoration: underline; font-size: 12px; }
+  .pager { display: flex; align-items: center; gap: 10px; margin-top: 12px; justify-content: flex-end; }
+  .pager button {
+    border: 1px solid var(--border); background: #fff; border-radius: 8px;
+    padding: 6px 12px; cursor: pointer; font-size: 13px; color: var(--text);
+  }
+  .pager button:disabled { opacity: .4; cursor: default; }
+  .pager .info { color: var(--muted); font-size: 13px; }
+
+  /* 错误条 */
+  .err { color: #c0392b; font-size: 13px; padding: 8px 0; }
+  .loading { color: var(--muted); font-size: 13px; padding: 16px; text-align: center; }
+
+  /* 弹窗 */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none;
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  .modal-mask.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 14px; padding: 20px; max-width: 560px; width: 90%;
+    max-height: 70vh; overflow: auto; box-shadow: 0 12px 40px rgba(0,0,0,.2);
+  }
+  .modal h4 { margin: 0 0 12px; }
+  .modal pre {
+    background: #f6f7fb; padding: 14px; border-radius: 10px; overflow: auto;
+    font-size: 12px; line-height: 1.5; margin: 0;
+  }
+  .modal .close { margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 顶部栏 -->
+  <div class="topbar">
+    <h1 id="pageTitle" data-i18n="pageTitle">🦦 水獭星球 · 数据看板</h1>
+    <span class="sub" id="loadTime"></span>
+    <span class="spacer"></span>
+    <div class="lang-toggle">
+      <button id="langZh" class="lang-btn active" onclick="setLang('zh')">中</button>
+      <button id="langEn" class="lang-btn" onclick="setLang('en')">EN</button>
+    </div>
+    <button class="btn" id="refreshBtn" data-i18n="refresh" onclick="refreshAll()">↻ 刷新</button>
+  </div>
+
+  <!-- 来源切换 navbar -->
+  <div class="srcnav" id="srcnav">
+    <button class="src-btn active" data-src=""            onclick="setSource('')">全部</button>
+    <button class="src-btn"        data-src="otter-egg"   onclick="setSource('otter-egg')">游戏</button>
+    <button class="src-btn"        data-src="landing-page" onclick="setSource('landing-page')">Landing Page</button>
+    <button class="src-btn"        data-src="contact-page" onclick="setSource('contact-page')">Contact</button>
+  </div>
+
+  <div class="err" id="globalErr" style="display:none"></div>
+
+  <!-- ① 核心指标卡片 -->
+  <div class="cards" id="cards">
+    <div class="loading">加载中…</div>
+  </div>
+
+  <!-- ② 事件分布图表（仅游戏/全部视图）-->
+  <div id="secGameCharts">
+    <div class="section-title" data-i18n="secEvents">📊 事件分布</div>
+    <div class="charts">
+      <div class="panel">
+        <h3 data-i18n="chartEvents">埋点事件次数分布</h3>
+        <div class="chart-box" id="eventChartBox"><div class="loading" data-i18n="loading">加载中…</div></div>
+      </div>
+      <div class="panel">
+        <h3 data-i18n="chartLang">留资语言分布</h3>
+        <div class="chart-box" id="langChartBox"><div class="loading" data-i18n="loading">加载中…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 埋点明细表格（仅游戏/全部视图）-->
+  <div id="secEventDetail">
+    <div class="section-title" data-i18n="secEventDetail">📋 埋点明细</div>
+    <div class="toolbar">
+      <span class="lbl" data-i18n="lblEvent">事件</span>
+      <select id="evFilter" onchange="onEvFilterChange()">
+        <option value="" data-i18n="optAll">全部</option>
+      </select>
+      <span class="lbl" data-i18n="lblSession">会话ID</span>
+      <input id="evSession" data-i18n-ph="phSession" placeholder="按 sessionId 精确筛选" size="22" />
+      <button class="btn" style="padding:7px 14px;box-shadow:0 2px 0 var(--orange-dark)" data-i18n="btnFilter" onclick="applyEvFilter()">筛选</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th data-i18n="thId">ID</th><th data-i18n="thSession">会话ID</th><th data-i18n="thEvent">事件</th><th data-i18n="thDetail">详情</th><th data-i18n="thTime">时间</th></tr></thead>
+        <tbody id="evBody"><tr><td colspan="5" class="loading" data-i18n="loading">加载中…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="pager" id="evPager"></div>
+  </div>
+
+  <!-- ④ 留资名单表格（全部 / 游戏 / Landing）-->
+  <div id="secSubmissions">
+    <div class="section-title" data-i18n="secSubmissions">📮 留资名单</div>
+    <div class="toolbar">
+      <span class="lbl" data-i18n="lblLang">语言</span>
+      <select id="subLang" onchange="applySubFilter()">
+        <option value="" data-i18n="optAll">全部</option>
+        <option value="zh" data-i18n="optZh">中文(微信)</option>
+        <option value="en" data-i18n="optEn">英文(邮箱)</option>
+      </select>
+      <span class="lbl" data-i18n="lblSearch">搜索</span>
+      <input id="subKeyword" data-i18n-ph="phSearch" placeholder="搜邮箱 / 微信号" size="22" oninput="onSubKeywordInput()" />
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th data-i18n="thId">ID</th><th data-i18n="thLang">语言</th><th data-i18n="thEmail">邮箱</th><th data-i18n="thWechat">微信号</th><th data-i18n="thSource">来源</th><th data-i18n="thTime">时间</th></tr></thead>
+        <tbody id="subBody"><tr><td colspan="6" class="loading" data-i18n="loading">加载中…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="pager" id="subPager"></div>
+  </div>
+
+  <!-- ⑤ Contact 留言（仅 Contact 视图）邮箱 + 留言内容 -->
+  <div id="secContactMsg" style="display:none">
+    <div class="section-title" data-i18n="secContactMsg">💬 Contact 留言</div>
+    <div class="toolbar">
+      <span class="lbl" data-i18n="lblSearch">搜索</span>
+      <input id="msgKeyword" data-i18n-ph="phMsgSearch" placeholder="搜邮箱 / 留言内容" size="26" oninput="onMsgKeywordInput()" />
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th data-i18n="thId">ID</th><th data-i18n="thEmail">邮箱</th><th data-i18n="thMessage">留言内容</th><th data-i18n="thTime">时间</th></tr></thead>
+        <tbody id="msgBody"><tr><td colspan="4" class="loading" data-i18n="loading">加载中…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="pager" id="msgPager"></div>
+  </div>
+
+</div>
+
+<!-- payload 详情弹窗 -->
+<div class="modal-mask" id="modalMask" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h4 data-i18n="modalTitle">事件详情 (payload)</h4>
+    <pre id="modalContent"></pre>
+    <button class="btn close" data-i18n="btnClose" onclick="closeModal()">关闭</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════ 配置区 ═══════════════════════
+const API_BASE = 'https://api.otterlantis.com';  // 后端地址（HTTPS 域名）；同源部署时改为 ''
+const PAGE_SIZE = 20;
+const MAX_PAGES = 50;                          // 全量拉取安全阀，防异常死循环
+
+// ─── 当前视图状态（来源过滤 + 界面语言）───
+let LANG = 'zh';        // 'zh' | 'en'
+let SOURCE = '';        // '' 全部 | 'otter-egg' | 'landing-page' | 'contact-page'
+
+// ─── 双语字典 ───
+// 界面静态文字按 data-i18n key 取；动态内容（事件名/来源/语言等）走下方 *_LABELS
+const I18N = {
+  zh: {
+    pageTitle: '🦦 水獭星球 · 数据看板',
+    refresh: '↻ 刷新',
+    srcAll: '全部', srcGame: '游戏', srcLanding: 'Landing Page', srcContact: 'Contact',
+    secEvents: '📊 事件分布',
+    chartEvents: '埋点事件次数分布', chartLang: '留资语言分布',
+    secEventDetail: '📋 埋点明细', secSubmissions: '📮 留资名单',
+    secContactMsg: '💬 Contact 留言',
+    loading: '加载中…', noData: '无数据', empty: '暂无数据',
+    lblEvent: '事件', lblSession: '会话ID', lblLang: '语言', lblSearch: '搜索',
+    phSession: '按 sessionId 精确筛选', phSearch: '搜邮箱 / 微信号', phMsgSearch: '搜邮箱 / 留言内容',
+    btnFilter: '筛选', btnClose: '关闭',
+    optAll: '全部', optZh: '中文(微信)', optEn: '英文(邮箱)',
+    thId: 'ID', thSession: '会话ID', thEvent: '事件', thDetail: '详情', thTime: '时间',
+    thLang: '语言', thEmail: '邮箱', thWechat: '微信号', thSource: '来源', thMessage: '留言内容',
+    modalTitle: '事件详情 (payload)',
+    detailLink: '详情',
+    // 卡片
+    cardFollow: '点击「想看后续」', cardFollowSub: '留存页关注 · 核心指标',
+    cardVoice: '语音交互次数', cardVoiceDur: '语音总时长', calc: '计算中…',
+    cardStory: '形成作品次数', cardStorySub: '走完讲故事环节',
+    cardAvgUse: '人均使用时长', cardTotalUse: '总使用时长',
+    cardPlay: '总游玩次数', cardSessions: '总会话数', cardSessionsSub: '去重 sessionId',
+    cardSubTotal: '留资总数', cardSubTotalSub: '提交联系方式',
+    cardSubmit: '留资提交动作',
+    cardMsgTotal: '留言总数', cardMsgTotalSub: '含留言内容的提交',
+    aggFail: '聚合计算失败', errOverview: '概览数据加载失败：',
+    updatedAt: '数据更新于 ', countCnt: '次', countSession: '个', countItem: '条',
+    langZh: '中文', langEn: '英文',
+    pgPrev: '‹ 上一页', pgNext: '下一页 ›', pgInfo: (p,t,n) => `第 ${p} / ${t} 页 · 共 ${n} 条`,
+    unitMs: { sec:' 秒', min:' 分', hour:' 时' },
+  },
+  en: {
+    pageTitle: '🦦 Otterlantis · Dashboard',
+    refresh: '↻ Refresh',
+    srcAll: 'All', srcGame: 'Game', srcLanding: 'Landing Page', srcContact: 'Contact',
+    secEvents: '📊 Event Distribution',
+    chartEvents: 'Event Counts', chartLang: 'Lead Language',
+    secEventDetail: '📋 Event Log', secSubmissions: '📮 Leads',
+    secContactMsg: '💬 Contact Messages',
+    loading: 'Loading…', noData: 'No data', empty: 'No data',
+    lblEvent: 'Event', lblSession: 'Session', lblLang: 'Language', lblSearch: 'Search',
+    phSession: 'Filter by sessionId', phSearch: 'Search email / WeChat', phMsgSearch: 'Search email / message',
+    btnFilter: 'Filter', btnClose: 'Close',
+    optAll: 'All', optZh: 'Chinese (WeChat)', optEn: 'English (Email)',
+    thId: 'ID', thSession: 'Session', thEvent: 'Event', thDetail: 'Details', thTime: 'Time',
+    thLang: 'Language', thEmail: 'Email', thWechat: 'WeChat', thSource: 'Source', thMessage: 'Message',
+    modalTitle: 'Event Details (payload)',
+    detailLink: 'view',
+    cardFollow: 'Clicked "See More"', cardFollowSub: 'Retention page · core metric',
+    cardVoice: 'Voice Interactions', cardVoiceDur: 'Total voice time', calc: 'computing…',
+    cardStory: 'Works Created', cardStorySub: 'Completed storytelling',
+    cardAvgUse: 'Avg. Session Time', cardTotalUse: 'Total usage time',
+    cardPlay: 'Total Plays', cardSessions: 'Total Sessions', cardSessionsSub: 'unique sessionId',
+    cardSubTotal: 'Total Leads', cardSubTotalSub: 'submitted contacts',
+    cardSubmit: 'Submit Actions',
+    cardMsgTotal: 'Total Messages', cardMsgTotalSub: 'submissions with a message',
+    aggFail: 'Aggregate failed', errOverview: 'Failed to load overview: ',
+    updatedAt: 'Updated at ', countCnt: '', countSession: '', countItem: '',
+    langZh: 'Chinese', langEn: 'English',
+    pgPrev: '‹ Prev', pgNext: 'Next ›', pgInfo: (p,t,n) => `Page ${p} / ${t} · ${n} total`,
+    unitMs: { sec:'s', min:'m', hour:'h' },
+  },
+};
+const t = k => I18N[LANG][k];
+
+// 事件名 → 中/英标签
+const EVENT_LABELS = {
+  game_start:          ['游戏开始', 'Game Start'],
+  section_duration:    ['页面停留', 'Page Duration'],
+  stage_complete:      ['关卡完成', 'Stage Complete'],
+  voice_start:         ['语音开始', 'Voice Start'],
+  voice_end:           ['语音结束', 'Voice End'],
+  retention_form_open: ['点击想看后续', 'Clicked See More'],
+  retention_submit:    ['留资提交', 'Lead Submit'],
+  retention_skip:      ['跳过留资', 'Lead Skip'],
+};
+// section / stage / scene 子标签（用于 payload 友好展示）
+const SUB_LABELS = {
+  main:['主页','Home'], storybook:['故事书','Storybook'], intro:['开场','Intro'],
+  parkour:['跑酷','Parkour'], story:['讲故事','Story'], gallery:['相册','Gallery'], egg:['水獭蛋','Otter Egg'],
+  npc1:['啄木鸟','Woodpecker'], npc2:['基维鸟','Kiwi'], npc3:['叽里咕噜','Gurgle'], fakeMoon:['假月亮','Fake Moon'],
+};
+const langIdx  = () => LANG === 'en' ? 1 : 0;
+const labelEv  = e => (EVENT_LABELS[e] ? EVENT_LABELS[e][langIdx()] : e);
+const labelSub = s => (SUB_LABELS[s]   ? SUB_LABELS[s][langIdx()]   : s);
+
+// ═══════════════════════ 工具层 ═══════════════════════
+async function getJSON(path) {
+  const res = await fetch(API_BASE + path, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+function fmtDuration(ms) {
+  if (ms == null || isNaN(ms)) return '—';
+  const u = t('unitMs');
+  const s = Math.round(ms / 1000);
+  if (s < 60) return s + u.sec;
+  const m = Math.floor(s / 60), rs = s % 60;
+  if (m < 60) return m + u.min + (rs ? ' ' + rs + u.sec : '');
+  const h = Math.floor(m / 60), rm = m % 60;
+  return h + u.hour + (rm ? ' ' + rm + u.min : '');
+}
+function fmtTs(ts) {
+  if (!ts) return '—';
+  const d = new Date(Number(ts));
+  if (isNaN(d.getTime())) return String(ts);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+function hasChart() { return typeof window.Chart !== 'undefined'; }
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showGlobalErr(msg) {
+  const el = document.getElementById('globalErr');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+
+// ═══════════════════════ 数据层 ═══════════════════════
+// 全量数据只在刷新时拉一次，之后来源切换 / 语言切换都是纯前端计算，瞬间响应。
+let ALL_EVENTS = [];      // 全部埋点事件
+let ALL_SUBS   = [];      // 全部留资记录
+let dataApprox = false;   // 是否触达分页上限（数据可能不全）
+let chartRefs = { event: null, lang: null };
+
+// 通用全量分页拉取
+async function fetchAll(basePath) {
+  let page = 1, all = [], total = Infinity, approx = false;
+  while (all.length < total && page <= MAX_PAGES) {
+    const sep = basePath.includes('?') ? '&' : '?';
+    const r = await getJSON(`${basePath}${sep}page=${page}&pageSize=100`);
+    total = r.total ?? 0;
+    if (!r.items || r.items.length === 0) break;
+    all.push(...r.items);
+    page++;
+  }
+  if (all.length < total) approx = true;   // 超过 MAX_PAGES 上限，数据近似
+  return { items: all, approx };
+}
+
+// 拉全量原始数据（刷新时调用）
+async function loadAllData() {
+  const [ev, sub] = await Promise.all([
+    fetchAll('/api/track/events'),
+    fetchAll('/api/otter-egg/submissions'),
+  ]);
+  ALL_EVENTS = ev.items;
+  ALL_SUBS   = sub.items;
+  dataApprox = ev.approx || sub.approx;
+}
+
+// ─── 来源匹配 ───
+// 规则：
+//   · 留资按自身 source 字段（otter-egg / landing-page / contact-page）。
+//   · 埋点事件：contact_submit 归 contact-page（Contact 表单同时发的留言埋点，无 source 字段）；
+//     其余无 source 的埋点是游戏遥测，归 otter-egg。
+function srcOfEvent(it) {
+  if (it.source) return it.source;
+  if (it.payload?.source) return it.payload.source;
+  if (it.event === 'contact_submit') return 'contact-page';
+  return 'otter-egg';
+}
+function srcOfSub(it)   { return it.source || ''; }
+function matchEvent(it) { return !SOURCE || srcOfEvent(it) === SOURCE; }
+function matchSub(it)   { return !SOURCE || srcOfSub(it)   === SOURCE; }
+
+// 当前来源下的事件 / 留资视图
+function viewEvents() { return ALL_EVENTS.filter(matchEvent); }
+function viewSubs()   { return ALL_SUBS.filter(matchSub); }
+
+// Contact 留言视图：contact_submit 事件，取出 email + message（兼容存在顶层或 payload 里）
+function viewContactMsgs() {
+  return ALL_EVENTS
+    .filter(it => it.event === 'contact_submit')
+    .map(it => ({
+      id: it.id,
+      email: it.email ?? it.payload?.email ?? '',
+      message: it.message ?? it.payload?.message ?? '',
+      ts: it.ts,
+    }));
+}
+
+// ─── 前端聚合：从过滤后的事件算各项指标 ───
+function computeStats() {
+  const evs = viewEvents();
+  const subs = viewSubs();
+
+  // byEvent 计数
+  const byEventMap = {};
+  for (const it of evs) byEventMap[it.event] = (byEventMap[it.event] || 0) + 1;
+  const byEvent = Object.keys(byEventMap).map(event => ({ event, count: byEventMap[event] }));
+
+  // 去重 sessionId
+  const sessionSet = new Set();
+  for (const it of evs) if (it.sessionId) sessionSet.add(it.sessionId);
+
+  // 留资语言分布
+  const langMap = {};
+  for (const it of subs) { const l = it.lang || 'unknown'; langMap[l] = (langMap[l] || 0) + 1; }
+  const byLang = Object.keys(langMap).map(lang => ({ lang, count: langMap[lang] }));
+
+  // 语音总时长
+  let voiceMs = 0;
+  for (const it of evs) if (it.event === 'voice_end') voiceMs += Number(it.payload?.durationMs) || 0;
+
+  // 使用时长：section_duration 按 sessionId 聚合
+  const bySession = {};
+  for (const it of evs) {
+    if (it.event !== 'section_duration') continue;
+    const sid = it.sessionId || '_';
+    bySession[sid] = (bySession[sid] || 0) + (Number(it.payload?.durationMs) || 0);
+  }
+  const sids = Object.keys(bySession);
+  let totalUseMs = 0;
+  for (const sid of sids) totalUseMs += bySession[sid];
+  const avgUseMs = sids.length ? totalUseMs / sids.length : 0;
+
+  // 形成作品次数 = stage_complete 中 stage==='story'
+  let storyCount = 0;
+  for (const it of evs) if (it.event === 'stage_complete' && it.payload?.stage === 'story') storyCount++;
+
+  return {
+    byEvent, byLang,
+    sessions: sessionSet.size,
+    eggTotal: subs.length,
+    msgCount: viewContactMsgs().length,
+    voiceMs, totalUseMs, avgUseMs, storyCount,
+    approx: dataApprox,
+  };
+}
+
+let curStats = null;   // computeStats() 的当前结果，渲染层共用
+
+// ═══════════════════════ 渲染层 ═══════════════════════
+function getEventCount(ev) {
+  if (!curStats?.byEvent) return 0;
+  const hit = curStats.byEvent.find(x => x.event === ev);
+  return hit ? hit.count : 0;
+}
+
+// 卡片：按当前来源决定显示哪些指标
+//   · 全部 / 游戏：完整游戏指标 + 留资
+//   · Landing Page：只有留资总数（页面只采集邮箱）
+//   · Contact：留资总数 + 留言总数
+function renderCards() {
+  const wrap = document.getElementById('cards');
+  if (!curStats) { wrap.innerHTML = `<div class="loading">${t('loading')}</div>`; return; }
+  const s = curStats;
+  const mark = s.approx ? '≈ ' : '';
+
+  // 非游戏来源：精简卡片
+  if (SOURCE === 'landing-page' || SOURCE === 'contact-page') {
+    let html = `
+      <div class="card hl">
+        <div class="label"><span class="dot" style="background:var(--green)"></span>${t('cardSubTotal')}</div>
+        <div class="value">${s.eggTotal}<span class="unit">${t('countItem')}</span></div>
+        <div class="sub">${t('cardSubTotalSub')}</div>
+      </div>`;
+    if (SOURCE === 'contact-page') {
+      html += `
+      <div class="card hl">
+        <div class="label"><span class="dot" style="background:var(--orange)"></span>${t('cardMsgTotal')}</div>
+        <div class="value">${s.msgCount}<span class="unit">${t('countItem')}</span></div>
+        <div class="sub">${t('cardMsgTotalSub')}</div>
+      </div>`;
+    }
+    wrap.innerHTML = html;
+    return;
+  }
+
+  // 全部 / 游戏：完整指标
+  const followClick = getEventCount('retention_form_open');
+  const voiceCount  = getEventCount('voice_start');
+  const submitCount = getEventCount('retention_submit');
+  const playCount   = getEventCount('game_start');
+
+  wrap.innerHTML = `
+    <div class="card hl">
+      <div class="label"><span class="dot" style="background:var(--orange)"></span>${t('cardFollow')}</div>
+      <div class="value">${followClick}<span class="unit">${t('countCnt')}</span></div>
+      <div class="sub">${t('cardFollowSub')}</div>
+    </div>
+    <div class="card hl">
+      <div class="label"><span class="dot" style="background:var(--orange)"></span>${t('cardVoice')}</div>
+      <div class="value">${voiceCount}<span class="unit">${t('countCnt')}</span></div>
+      <div class="sub">${t('cardVoiceDur')} ${mark}${fmtDuration(s.voiceMs)}</div>
+    </div>
+    <div class="card hl">
+      <div class="label"><span class="dot" style="background:var(--orange)"></span>${t('cardStory')}</div>
+      <div class="value">${mark}${s.storyCount}<span class="unit">${t('countCnt')}</span></div>
+      <div class="sub">${t('cardStorySub')}</div>
+    </div>
+    <div class="card hl">
+      <div class="label"><span class="dot" style="background:var(--orange)"></span>${t('cardAvgUse')}</div>
+      <div class="value">${mark}${fmtDuration(s.avgUseMs)}</div>
+      <div class="sub">${t('cardTotalUse')} ${mark}${fmtDuration(s.totalUseMs)}</div>
+    </div>
+    <div class="card">
+      <div class="label"><span class="dot" style="background:var(--blue)"></span>${t('cardPlay')}</div>
+      <div class="value">${playCount}<span class="unit">${t('countCnt')}</span></div>
+      <div class="sub">game_start</div>
+    </div>
+    <div class="card">
+      <div class="label"><span class="dot" style="background:var(--blue)"></span>${t('cardSessions')}</div>
+      <div class="value">${s.sessions}<span class="unit">${t('countSession')}</span></div>
+      <div class="sub">${t('cardSessionsSub')}</div>
+    </div>
+    <div class="card">
+      <div class="label"><span class="dot" style="background:var(--green)"></span>${t('cardSubTotal')}</div>
+      <div class="value">${s.eggTotal}<span class="unit">${t('countItem')}</span></div>
+      <div class="sub">${t('cardSubTotalSub')}</div>
+    </div>
+    <div class="card">
+      <div class="label"><span class="dot" style="background:var(--green)"></span>${t('cardSubmit')}</div>
+      <div class="value">${submitCount}<span class="unit">${t('countCnt')}</span></div>
+      <div class="sub">retention_submit</div>
+    </div>
+  `;
+}
+
+function renderCharts() {
+  // 销毁旧图表实例，避免刷新时叠加
+  if (chartRefs.event) { chartRefs.event.destroy(); chartRefs.event = null; }
+  if (chartRefs.lang)  { chartRefs.lang.destroy();  chartRefs.lang = null; }
+
+  const evData = (curStats?.byEvent || [])
+    .filter(x => x.event !== 'health_probe' && x.event !== 'test_event' && x.event !== 'key_update_probe')
+    .slice().sort((a, b) => b.count - a.count);
+  const langData = curStats?.byLang || [];
+
+  renderEventChart(evData);
+  renderLangChart(langData);
+}
+
+function renderEventChart(evData) {
+  const box = document.getElementById('eventChartBox');
+  if (!evData.length) { box.innerHTML = `<div class="loading">${t('empty')}</div>`; return; }
+
+  if (hasChart()) {
+    box.innerHTML = '<canvas></canvas>';
+    const ctx = box.querySelector('canvas');
+    chartRefs.event = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: evData.map(x => labelEv(x.event)),
+        datasets: [{ label: t('countCnt') || 'count', data: evData.map(x => x.count), backgroundColor: '#ff9100', borderRadius: 6 }],
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+      },
+    });
+  } else {
+    box.innerHTML = cssBars(evData.map(x => ({ name: labelEv(x.event), count: x.count })));
+  }
+}
+
+function renderLangChart(langData) {
+  const box = document.getElementById('langChartBox');
+  if (!langData.length) { box.innerHTML = `<div class="loading">${t('empty')}</div>`; return; }
+  const nameOf = l => l === 'zh' ? t('langZh') : l === 'en' ? t('langEn') : l;
+
+  if (hasChart()) {
+    box.innerHTML = '<canvas></canvas>';
+    const ctx = box.querySelector('canvas');
+    chartRefs.lang = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: langData.map(x => nameOf(x.lang)),
+        datasets: [{ data: langData.map(x => x.count), backgroundColor: ['#ff9100', '#4a90d9', '#34c759', '#bbb'] }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+    });
+  } else {
+    box.innerHTML = cssBars(langData.map(x => ({ name: nameOf(x.lang), count: x.count })));
+  }
+}
+
+// 纯 CSS 柱状图（Chart.js 不可达时降级）
+function cssBars(rows) {
+  const max = Math.max(1, ...rows.map(r => r.count));
+  return '<div class="css-bars">' + rows.map(r => `
+    <div class="css-bar-row">
+      <span class="nm" title="${esc(r.name)}">${esc(r.name)}</span>
+      <span class="css-bar-track"><span class="css-bar-fill" style="width:${(r.count / max * 100).toFixed(1)}%"></span></span>
+      <span class="ct">${r.count}</span>
+    </div>`).join('') + '</div>';
+}
+
+// ── 埋点明细表格（纯前端过滤分页）──
+let evState = { page: 1, event: '', sessionId: '' };
+
+function fillEventFilterOptions() {
+  const sel = document.getElementById('evFilter');
+  // 重建选项（来源/语言切换时需刷新标签）；选中态以 evState.event 为准
+  sel.innerHTML = `<option value="">${t('optAll')}</option>`;
+  const evs = (curStats?.byEvent || []).map(x => x.event);
+  for (const ev of evs) {
+    const o = document.createElement('option');
+    o.value = ev; o.textContent = labelEv(ev) + ' (' + ev + ')';
+    sel.appendChild(o);
+  }
+  sel.value = evState.event;  // 与状态对齐（来源切换后为空；该事件在新来源不存在时回落到「全部」）
+}
+
+function loadEvents() {
+  const body = document.getElementById('evBody');
+  // 当前来源 + 事件 + sessionId 过滤
+  let rows = viewEvents();
+  if (evState.event)     rows = rows.filter(it => it.event === evState.event);
+  if (evState.sessionId) rows = rows.filter(it => (it.sessionId || '') === evState.sessionId);
+  // 时间倒序
+  rows = rows.slice().sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
+
+  const total = rows.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (evState.page > pages) evState.page = pages;
+  const start = (evState.page - 1) * PAGE_SIZE;
+  const pageRows = rows.slice(start, start + PAGE_SIZE);
+
+  if (!pageRows.length) { body.innerHTML = `<tr><td colspan="5" class="loading">${t('noData')}</td></tr>`; }
+  else {
+    body.innerHTML = pageRows.map(it => {
+      const pj = JSON.stringify(it.payload || {});
+      const summary = payloadSummary(it.event, it.payload);
+      return `<tr>
+        <td class="mono">${it.id}</td>
+        <td class="mono">${esc(it.sessionId)}</td>
+        <td><span class="tag">${esc(labelEv(it.event))}</span></td>
+        <td>${summary}${pj !== '{}' ? ` <span class="link" onclick='showPayload(${JSON.stringify(pj)})'>${t('detailLink')}</span>` : ''}</td>
+        <td class="mono">${fmtTs(it.ts)}</td>
+      </tr>`;
+    }).join('');
+  }
+  renderPager('evPager', total, evState.page, p => { evState.page = p; loadEvents(); });
+}
+
+// payload 友好摘要（一眼能看的关键字段）
+function payloadSummary(ev, p) {
+  if (!p) return '';
+  if (ev === 'section_duration') return `${labelSub(p.section)} · ${fmtDuration(p.durationMs)}`;
+  if (ev === 'voice_end')        return `${labelSub(p.scene)} · ${fmtDuration(p.durationMs)}`;
+  if (ev === 'voice_start')      return labelSub(p.scene);
+  if (ev === 'stage_complete')   return labelSub(p.stage);
+  if (ev === 'retention_form_open') return p.lang === 'zh' ? t('langZh') : p.lang === 'en' ? t('langEn') : (p.lang || '');
+  if (ev === 'retention_submit') return p.lang === 'zh' ? t('langZh') : t('langEn');
+  return '';
+}
+
+function onEvFilterChange() {}  // 选择后等点「筛选」按钮统一应用
+function applyEvFilter() {
+  evState.event = document.getElementById('evFilter').value;
+  evState.sessionId = document.getElementById('evSession').value.trim();
+  evState.page = 1;
+  loadEvents();
+}
+
+// ── 留资名单表格（纯前端过滤分页）──
+let subState = { page: 1, lang: '', keyword: '' };
+let subKeywordTimer = null;
+
+function loadSubmissions() {
+  const body = document.getElementById('subBody');
+  let rows = viewSubs();
+  if (subState.lang)    rows = rows.filter(it => (it.lang || '') === subState.lang);
+  if (subState.keyword) {
+    const kw = subState.keyword.toLowerCase();
+    rows = rows.filter(it =>
+      (it.email  || '').toLowerCase().includes(kw) ||
+      (it.wechat || '').toLowerCase().includes(kw));
+  }
+  rows = rows.slice().sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
+
+  const total = rows.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (subState.page > pages) subState.page = pages;
+  const start = (subState.page - 1) * PAGE_SIZE;
+  const pageRows = rows.slice(start, start + PAGE_SIZE);
+
+  if (!pageRows.length) { body.innerHTML = `<tr><td colspan="6" class="loading">${t('noData')}</td></tr>`; }
+  else {
+    body.innerHTML = pageRows.map(it => `<tr>
+      <td class="mono">${it.id}</td>
+      <td><span class="tag ${it.lang === 'zh' ? 'zh' : 'en'}">${it.lang === 'zh' ? t('langZh') : it.lang === 'en' ? t('langEn') : esc(it.lang)}</span></td>
+      <td>${esc(it.email) || '<span class="mono">—</span>'}</td>
+      <td>${esc(it.wechat) || '<span class="mono">—</span>'}</td>
+      <td class="mono">${esc(it.source)}</td>
+      <td class="mono">${fmtTs(it.ts)}</td>
+    </tr>`).join('');
+  }
+  renderPager('subPager', total, subState.page, p => { subState.page = p; loadSubmissions(); });
+}
+
+function applySubFilter() {
+  subState.lang = document.getElementById('subLang').value;
+  subState.page = 1;
+  loadSubmissions();
+}
+function onSubKeywordInput() {
+  clearTimeout(subKeywordTimer);
+  subKeywordTimer = setTimeout(() => {
+    subState.keyword = document.getElementById('subKeyword').value.trim();
+    subState.page = 1;
+    loadSubmissions();
+  }, 300);
+}
+
+// ── Contact 留言表格（邮箱 + 留言内容，纯前端过滤分页）──
+let msgState = { page: 1, keyword: '' };
+let msgKeywordTimer = null;
+
+function loadContactMsgs() {
+  const body = document.getElementById('msgBody');
+  let rows = viewContactMsgs();
+  if (msgState.keyword) {
+    const kw = msgState.keyword.toLowerCase();
+    rows = rows.filter(it =>
+      (it.email   || '').toLowerCase().includes(kw) ||
+      (it.message || '').toLowerCase().includes(kw));
+  }
+  rows = rows.slice().sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
+
+  const total = rows.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (msgState.page > pages) msgState.page = pages;
+  const start = (msgState.page - 1) * PAGE_SIZE;
+  const pageRows = rows.slice(start, start + PAGE_SIZE);
+
+  if (!pageRows.length) { body.innerHTML = `<tr><td colspan="4" class="loading">${t('noData')}</td></tr>`; }
+  else {
+    body.innerHTML = pageRows.map(it => `<tr>
+      <td class="mono">${it.id}</td>
+      <td>${esc(it.email) || '<span class="mono">—</span>'}</td>
+      <td>${esc(it.message) || '<span class="mono">—</span>'}</td>
+      <td class="mono">${fmtTs(it.ts)}</td>
+    </tr>`).join('');
+  }
+  renderPager('msgPager', total, msgState.page, p => { msgState.page = p; loadContactMsgs(); });
+}
+
+function onMsgKeywordInput() {
+  clearTimeout(msgKeywordTimer);
+  msgKeywordTimer = setTimeout(() => {
+    msgState.keyword = document.getElementById('msgKeyword').value.trim();
+    msgState.page = 1;
+    loadContactMsgs();
+  }, 300);
+}
+
+// ── 通用翻页器 ──
+function renderPager(elId, total, page, onGo) {
+  const el = document.getElementById(elId);
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  el.innerHTML = '';
+  const prev = document.createElement('button');
+  prev.textContent = t('pgPrev'); prev.disabled = page <= 1;
+  prev.onclick = () => onGo(page - 1);
+  const next = document.createElement('button');
+  next.textContent = t('pgNext'); next.disabled = page >= pages;
+  next.onclick = () => onGo(page + 1);
+  const info = document.createElement('span');
+  info.className = 'info';
+  info.textContent = t('pgInfo')(page, pages, total);
+  el.append(info, prev, next);
+}
+
+// ── payload 弹窗 ──
+function showPayload(jsonStr) {
+  let pretty = jsonStr;
+  try { pretty = JSON.stringify(JSON.parse(jsonStr), null, 2); } catch (e) {}
+  document.getElementById('modalContent').textContent = pretty;
+  document.getElementById('modalMask').classList.add('open');
+}
+function closeModal(e) {
+  if (e && e.target.id !== 'modalMask' && !e.target.classList.contains('close')) return;
+  document.getElementById('modalMask').classList.remove('open');
+}
+
+// ═══════════════════════ 语言 / 来源切换 ═══════════════════════
+// 把所有带 data-i18n 的静态文字刷成当前语言
+function applyI18n() {
+  document.documentElement.lang = LANG === 'en' ? 'en' : 'zh-CN';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    if (I18N[LANG][k] != null) el.textContent = I18N[LANG][k];
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const k = el.getAttribute('data-i18n-ph');
+    if (I18N[LANG][k] != null) el.placeholder = I18N[LANG][k];
+  });
+  // 来源 navbar 文字
+  const srcMap = { '': 'srcAll', 'otter-egg': 'srcGame', 'landing-page': 'srcLanding', 'contact-page': 'srcContact' };
+  document.querySelectorAll('.src-btn').forEach(b => {
+    const key = srcMap[b.dataset.src];
+    if (key) b.textContent = t(key);
+  });
+  document.title = LANG === 'en' ? 'Otterlantis · Dashboard' : '水獭星球 · 数据看板';
+}
+
+// 按当前来源显隐各区块
+//   · 全部 / 游戏：图表 + 埋点明细 + 留资名单（隐藏 Contact 留言）
+//   · Landing Page：仅留资名单
+//   · Contact：仅 Contact 留言（邮箱+留言）
+function applyLayout() {
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+  const isGame    = SOURCE === '' || SOURCE === 'otter-egg';
+  const isLanding = SOURCE === 'landing-page';
+  const isContact = SOURCE === 'contact-page';
+  show('secGameCharts',  isGame);
+  show('secEventDetail', isGame);
+  show('secSubmissions', isGame || isLanding);
+  show('secContactMsg',  isContact);
+}
+
+// 用当前 SOURCE + LANG 重算并重渲染全部视图（不重新请求后端）
+function rerender() {
+  curStats = computeStats();
+  applyI18n();
+  applyLayout();
+  fillEventFilterOptions();
+  renderCards();
+  renderCharts();
+  loadEvents();
+  loadSubmissions();
+  loadContactMsgs();
+  if (lastLoadTs) document.getElementById('loadTime').textContent = t('updatedAt') + fmtTs(lastLoadTs);
+}
+
+function setLang(lang) {
+  if (lang === LANG) return;
+  LANG = lang;
+  document.getElementById('langZh').classList.toggle('active', lang === 'zh');
+  document.getElementById('langEn').classList.toggle('active', lang === 'en');
+  rerender();
+}
+
+function setSource(src) {
+  if (src === SOURCE) return;
+  SOURCE = src;
+  document.querySelectorAll('.src-btn').forEach(b => b.classList.toggle('active', b.dataset.src === src));
+  // 切来源时重置表格筛选与翻页，避免上一个来源的状态串味
+  evState = { page: 1, event: '', sessionId: '' };
+  subState = { page: 1, lang: '', keyword: '' };
+  msgState = { page: 1, keyword: '' };
+  const es = document.getElementById('evSession'); if (es) es.value = '';
+  const sk = document.getElementById('subKeyword'); if (sk) sk.value = '';
+  const sl = document.getElementById('subLang'); if (sl) sl.value = '';
+  const mk = document.getElementById('msgKeyword'); if (mk) mk.value = '';
+  rerender();
+}
+
+// ═══════════════════════ 初始化 ═══════════════════════
+let lastLoadTs = 0;
+
+async function refreshAll() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('busy');
+  document.getElementById('globalErr').style.display = 'none';
+
+  try {
+    await loadAllData();          // 一次性拉全量
+    lastLoadTs = Date.now();
+    rerender();                   // 按当前来源/语言算并渲染
+  } catch (e) {
+    showGlobalErr(t('errOverview') + e.message + '（' + API_BASE + '）');
+  }
+
+  btn.classList.remove('busy');
+}
+
+// 启动
+applyI18n();
+refreshAll();
+</script>
+</body>
+</html>

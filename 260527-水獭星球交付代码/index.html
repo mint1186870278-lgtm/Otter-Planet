@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Otterlantis</title>
+    <link rel="preload" as="image" href="/BG.webp" fetchpriority="high">
+    <script src="/otterlantis-story-tts.js?v=20260630"></script>
+    <link rel="stylesheet" href="/otterlantis-overrides.css?v=20260630">
+    <script src="/otterlantis-loader.js?v=20260630"></script>
+    <script type="module" src="/otterlantis-navigation.js?v=20260630"></script>
+    <script defer src="/otterlantis-audio.js?v=20260630"></script>
+    <link rel="stylesheet" crossorigin href="/otterlantis-auth.css?v=20260622-users">
+    <script defer src="/otterlantis-auth.js?v=20260622-users"></script>
+    <style>
+      html,
+      body,
+      #root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        background: #42aee8 url("/BG.webp") center / cover no-repeat;
+      }
+
+      .otter-static-boot-bg {
+        position: fixed;
+        inset: 0;
+        background: #42aee8 url("/BG.webp") center / cover no-repeat;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="otter-static-boot-bg" aria-hidden="true"></div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

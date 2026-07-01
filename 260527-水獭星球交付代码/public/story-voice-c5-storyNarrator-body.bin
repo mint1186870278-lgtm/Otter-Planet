@@ -1,0 +1,1 @@
+{"detail":[{"type":"literal_error","loc":["body","role"],"msg":"Input should be 'woodpecker', 'kiwi' or 'jiligulu'","input":"storyNarrator","ctx":{"expected":"'woodpecker', 'kiwi' or 'jiligulu'"}}]}

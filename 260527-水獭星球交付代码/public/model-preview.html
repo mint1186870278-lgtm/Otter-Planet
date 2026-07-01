@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>场景模型预览</title>
+<style>
+  html,body { margin:0; height:100%; background:#1a1a22; overflow:hidden; font-family:system-ui,"Microsoft YaHei",sans-serif; }
+  #info {
+    position:fixed; top:12px; left:12px; z-index:10; color:#fff;
+    background:rgba(0,0,0,.55); padding:10px 14px; border-radius:10px; font-size:13px; line-height:1.7;
+    max-width:340px;
+  }
+  #info b { color:#ffb347; }
+  #bar { color:#9fe; }
+  #err { color:#ff6b6b; white-space:pre-wrap; }
+  .hint { color:#aaa; font-size:12px; margin-top:6px; }
+</style>
+</head>
+<body>
+<div id="info">
+  <div>🦦 <b>场景模型预览</b></div>
+  <div id="bar">下载中… 0%</div>
+  <div id="stat"></div>
+  <div id="err"></div>
+  <div class="hint">鼠标左键拖拽旋转 · 滚轮缩放 · 右键平移</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const MODEL_URL = '/scene-model/Untitl(1).glb';
+const bar  = document.getElementById('bar');
+const stat = document.getElementById('stat');
+const errEl = document.getElementById('err');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a22);
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 5000);
+camera.position.set(0, 20, 80);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// 灯光：环境光 + 主方向光，保证没贴图也能看清形体
+scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+const dir = new THREE.DirectionalLight(0xffffff, 1.5);
+dir.position.set(30, 50, 20);
+scene.add(dir);
+scene.add(new THREE.HemisphereLight(0xbfdfff, 0x404040, 0.6));
+
+const t0 = performance.now();
+const loader = new GLTFLoader();
+loader.load(
+  MODEL_URL,
+  (gltf) => {
+    const loadMs = Math.round(performance.now() - t0);
+    const model = gltf.scene;
+    scene.add(model);
+
+    // 自动居中 + 适配相机距离
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    model.position.sub(center);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    camera.position.set(0, maxDim*0.4, maxDim*1.8);
+    camera.near = maxDim/100; camera.far = maxDim*10; camera.updateProjectionMatrix();
+    controls.target.set(0,0,0); controls.update();
+
+    // 统计三角形/网格数
+    let tris=0, meshes=0;
+    model.traverse(o=>{ if(o.isMesh){ meshes++; const g=o.geometry; if(g.index) tris+=g.index.count/3; else if(g.attributes.position) tris+=g.attributes.position.count/3; } });
+
+    bar.textContent = `✅ 加载完成，用时 ${(loadMs/1000).toFixed(1)} 秒`;
+    stat.innerHTML = `网格数：<b>${meshes}</b> ｜ 三角面：<b>${Math.round(tris).toLocaleString()}</b><br>尺寸：${size.x.toFixed(1)} × ${size.y.toFixed(1)} × ${size.z.toFixed(1)}`;
+  },
+  (e) => {
+    if (e.lengthComputable) {
+      const pct = (e.loaded/e.total*100).toFixed(0);
+      bar.textContent = `下载中… ${pct}%  (${(e.loaded/1048576).toFixed(1)} / ${(e.total/1048576).toFixed(1)} MB)`;
+    } else {
+      bar.textContent = `下载中… ${(e.loaded/1048576).toFixed(1)} MB`;
+    }
+  },
+  (err) => {
+    errEl.textContent = '❌ 加载失败：' + (err?.message || err);
+    bar.textContent = '加载失败';
+  }
+);
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+(function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene,camera); })();
+</script>
+</body>
+</html>

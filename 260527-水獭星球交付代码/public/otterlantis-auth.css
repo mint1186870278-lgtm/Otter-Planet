@@ -1,0 +1,324 @@
+.otter-auth-lock {
+  overflow: hidden;
+}
+
+.otter-auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(42, 157, 213, .76), rgba(36, 122, 177, .82)),
+    url("/BG.webp?v=202606112151") center / cover no-repeat;
+  font-family: Nunito, ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #21415c;
+}
+
+.otter-auth-panel {
+  width: min(920px, 100%);
+  display: grid;
+  grid-template-columns: minmax(260px, .9fr) minmax(320px, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.otter-auth-brand,
+.otter-auth-card {
+  background: rgba(255, 255, 255, .94);
+  border: 4px solid rgba(255, 255, 255, .75);
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgba(20, 75, 115, .26);
+}
+
+.otter-auth-brand {
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 430px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(235,248,255,.92)),
+    url("/otter-egg.webp?v=202606112151") right 18px bottom 18px / 132px auto no-repeat;
+}
+
+.otter-auth-logo {
+  width: 142px;
+  height: auto;
+}
+
+.otter-auth-brand h2 {
+  margin: 24px 0 10px;
+  font-size: 34px;
+  line-height: 1.08;
+  letter-spacing: 0;
+  color: #14527b;
+}
+
+.otter-auth-brand p {
+  margin: 0;
+  max-width: 280px;
+  font-size: 16px;
+  line-height: 1.55;
+  font-weight: 800;
+  color: #4b6c82;
+}
+
+.otter-auth-badge {
+  align-self: flex-start;
+  margin-top: 24px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #fff3c4;
+  color: #8a5b00;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.otter-auth-card {
+  padding: 26px;
+}
+
+.otter-auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.otter-auth-tab,
+.otter-auth-button,
+.otter-auth-link-button {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.otter-auth-tab {
+  min-height: 58px;
+  border-radius: 18px;
+  background: #e8f5fc;
+  color: #28617f;
+  font-weight: 1000;
+  font-size: 17px;
+}
+
+.otter-auth-tab.active {
+  background: #ff9800;
+  color: #fff;
+  box-shadow: 0 7px 0 #c96c00;
+}
+
+.otter-auth-form {
+  display: none;
+}
+
+.otter-auth-form.active {
+  display: block;
+}
+
+.otter-auth-title {
+  margin: 0 0 6px;
+  font-size: 26px;
+  line-height: 1.15;
+  color: #153f61;
+}
+
+.otter-auth-copy {
+  margin: 0 0 18px;
+  color: #5a7488;
+  line-height: 1.5;
+  font-weight: 750;
+}
+
+.otter-auth-field {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.otter-auth-field label {
+  font-size: 14px;
+  font-weight: 1000;
+  color: #315f7a;
+}
+
+.otter-auth-field input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 54px;
+  border-radius: 16px;
+  border: 3px solid #c8e7f6;
+  padding: 0 15px;
+  color: #183d57;
+  background: #fbfdff;
+  font-size: 17px;
+  font-weight: 850;
+  outline: none;
+}
+
+.otter-auth-field input:focus {
+  border-color: #ffad2f;
+  box-shadow: 0 0 0 4px rgba(255, 173, 47, .2);
+}
+
+.otter-auth-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.otter-auth-row .otter-auth-field {
+  flex: 1;
+}
+
+.otter-auth-link-button {
+  margin-top: 23px;
+  min-height: 54px;
+  border-radius: 16px;
+  padding: 0 14px;
+  background: #e8f5fc;
+  color: #21617f;
+  font-weight: 1000;
+}
+
+.otter-auth-form > .otter-auth-link-button {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.otter-auth-button {
+  width: 100%;
+  min-height: 58px;
+  margin-top: 12px;
+  border-radius: 18px;
+  background: #ff9800;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 1000;
+  box-shadow: 0 8px 0 #c96c00;
+}
+
+.otter-auth-button:disabled,
+.otter-auth-link-button:disabled {
+  opacity: .62;
+  cursor: wait;
+}
+
+.otter-auth-note {
+  margin-top: 14px;
+  min-height: 22px;
+  color: #637a8b;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.otter-auth-note.error {
+  color: #b42318;
+}
+
+.otter-auth-note.success {
+  color: #137a3a;
+}
+
+.otter-auth-id {
+  display: none;
+  margin-top: 14px;
+  padding: 13px 14px;
+  border-radius: 16px;
+  background: #f4fbef;
+  border: 2px solid #ccecbc;
+  font-weight: 1000;
+  color: #2f6a25;
+}
+
+.otter-auth-id.show {
+  display: block;
+}
+
+.otter-account-switcher {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 36px);
+  padding: 9px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .92);
+  border: 2px solid rgba(206, 235, 248, .95);
+  box-shadow: 0 10px 28px rgba(16, 79, 119, .18);
+  font-family: Nunito, ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #21415c;
+}
+
+.otter-account-role {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #e8f5fc;
+  color: #28617f;
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.otter-account-id {
+  font-size: 13px;
+  font-weight: 1000;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.otter-account-switcher button {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #ff9800;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 1000;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .otter-auth-overlay {
+    padding: 14px;
+    align-items: flex-start;
+    overflow: auto;
+  }
+
+  .otter-auth-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .otter-auth-brand {
+    min-height: auto;
+    padding: 20px;
+    background: rgba(255, 255, 255, .95);
+  }
+
+  .otter-auth-brand h2 {
+    margin-top: 18px;
+    font-size: 28px;
+  }
+
+  .otter-auth-card {
+    padding: 20px;
+  }
+
+  .otter-account-switcher {
+    top: 10px;
+    right: 10px;
+    padding: 7px;
+    gap: 6px;
+  }
+
+  .otter-account-role {
+    display: none;
+  }
+}

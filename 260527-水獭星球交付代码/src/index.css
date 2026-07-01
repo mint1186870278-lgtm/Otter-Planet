@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-otter-blue-sky: #52c2fe;
+  --color-otter-blue-ocean: #1a8aef;
+  --color-otter-blue-deep: #004ba0;
+  --color-otter-orange: #ff9100;
+  --color-otter-orange-light: #ffb732;
+  --color-otter-orange-shadow: #cc7400;
+  --color-otter-surface: rgba(255, 255, 255, 0.95);
+  --color-otter-text: #594031;
+  --color-otter-text-light: #a3897b;
+
+  --font-display: 'Baloo 2', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-otter-blue-deep);
+  color: white;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+}
+
+.kid-button-primary {
+  @apply bg-otter-orange hover:bg-otter-orange-light text-white font-display font-bold rounded-full 
+         shadow-[0_8px_0_var(--color-otter-orange-shadow)] hover:shadow-[0_4px_0_var(--color-otter-orange-shadow)] 
+         hover:translate-y-[4px] active:translate-y-[8px] active:shadow-none
+         transition-all flex items-center justify-center border-4 border-white/30;
+}
+
+.kid-button-secondary {
+  @apply bg-white hover:bg-gray-50 text-otter-text font-bold rounded-full 
+         shadow-[0_6px_0_#d1d5db] hover:shadow-[0_3px_0_#d1d5db] 
+         hover:translate-y-[3px] active:translate-y-[6px] active:shadow-none
+         transition-all flex items-center justify-center;
+}
+
+.kid-panel {
+  @apply bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border-4 border-white text-otter-text;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
