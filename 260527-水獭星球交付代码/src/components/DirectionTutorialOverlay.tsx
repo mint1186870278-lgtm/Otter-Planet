@@ -2,17 +2,18 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { TutorialDirection } from '../lib/controlTutorial';
 import shiningStarUrl from '../../shining-star.png';
+import { useLang } from '../App';
 
 const DIRECTION_META: Record<TutorialDirection, {
-  label: string;
+  label: { zh: string; en: string };
   keyHint: string;
   Icon: typeof ArrowLeft;
   gridClass: string;
 }> = {
-  left: { label: '左', keyHint: '← / A', Icon: ArrowLeft, gridClass: 'col-start-1 row-start-2' },
-  right: { label: '右', keyHint: '→ / D', Icon: ArrowRight, gridClass: 'col-start-3 row-start-2' },
-  up: { label: '上', keyHint: '↑ / W', Icon: ArrowUp, gridClass: 'col-start-2 row-start-1' },
-  down: { label: '下', keyHint: '↓ / S', Icon: ArrowDown, gridClass: 'col-start-2 row-start-3' },
+  left: { label: { zh: '左', en: 'Left' }, keyHint: '← / A', Icon: ArrowLeft, gridClass: 'col-start-1 row-start-2' },
+  right: { label: { zh: '右', en: 'Right' }, keyHint: '→ / D', Icon: ArrowRight, gridClass: 'col-start-3 row-start-2' },
+  up: { label: { zh: '上', en: 'Up' }, keyHint: '↑ / W', Icon: ArrowUp, gridClass: 'col-start-2 row-start-1' },
+  down: { label: { zh: '下', en: 'Down' }, keyHint: '↓ / S', Icon: ArrowDown, gridClass: 'col-start-2 row-start-3' },
 };
 
 const ORDER: TutorialDirection[] = ['up', 'left', 'right', 'down'];
@@ -48,6 +49,7 @@ export function DirectionTutorialOverlay({
   successId: number;
   onDirectionPress: (direction: TutorialDirection) => void;
 }) {
+  const { lang } = useLang();
   return (
     <motion.div
       className="pointer-events-none absolute inset-x-0 bottom-6 z-50 flex justify-center px-4"
@@ -60,19 +62,19 @@ export function DirectionTutorialOverlay({
         <div className="hidden w-[330px] shrink-0 flex-col items-center gap-2 sm:flex">
           <motion.img
             src={shiningStarUrl}
-            alt="闪闪"
+            alt={lang === 'zh' ? '闪闪' : 'Twinkle'}
             className="h-28 w-32 shrink-0 object-contain drop-shadow-xl"
             animate={{ y: [0, -6, 0], rotate: [0, -2, 2, 0] }}
             transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
           />
           <div className="flex w-full flex-col gap-1">
             <div className="rounded-full bg-otter-orange px-4 py-1 text-center font-display text-sm font-black text-white shadow-md">
-              闪闪
+              {lang === 'zh' ? '闪闪' : 'Twinkle'}
             </div>
             <div className="rounded-2xl bg-white px-4 py-3 text-center font-display text-lg font-black leading-snug text-otter-text shadow-inner">
-              先试试让小水獭动起来！
+              {lang === 'zh' ? '先试试让小水獭动起来！' : 'Try moving the little otter first!'}
               <br />
-              <span className="text-otter-orange">按亮起来的按钮～</span>
+              <span className="text-otter-orange">{lang === 'zh' ? '按亮起来的按钮～' : 'Press the lit-up button~'}</span>
             </div>
           </div>
         </div>
@@ -88,7 +90,7 @@ export function DirectionTutorialOverlay({
                 <motion.button
                   key={direction}
                   type="button"
-                  aria-label={`教学方向${meta.label}`}
+                  aria-label={`${lang === 'zh' ? '教学方向' : 'Tutorial direction '}${meta.label[lang]}`}
                   data-tutorial-direction={direction}
                   className={`${meta.gridClass} relative flex h-16 w-16 flex-col items-center justify-center rounded-2xl border-4 font-display font-black shadow-lg transition-colors md:h-20 md:w-20 ${
                     active
@@ -132,7 +134,7 @@ export function DirectionTutorialOverlay({
                 transition={{ duration: 0.8, ease: 'easeOut' }}
               >
                 <div className="relative rounded-full border-4 border-yellow-300 bg-white px-4 py-1 font-display text-xl font-black text-otter-orange shadow-xl">
-                  太棒了！
+                  {lang === 'zh' ? '太棒了！' : 'Great job!'}
                   {Array.from({ length: 8 }, (_, index) => (
                     <TinyStar key={index} index={index} burstId={successId} />
                   ))}
@@ -143,10 +145,10 @@ export function DirectionTutorialOverlay({
         </div>
 
         <div className="flex flex-col items-center gap-1 text-center font-display text-xs font-black text-otter-text sm:hidden">
-          <img src={shiningStarUrl} alt="闪闪" className="h-16 w-14 object-contain drop-shadow-lg" />
-          <span className="rounded-full bg-otter-orange px-3 py-0.5 text-white shadow-sm">闪闪</span>
-          <span>先试试让小水獭动起来！</span>
-          <span className="text-otter-orange">按亮起来的按钮～</span>
+          <img src={shiningStarUrl} alt={lang === 'zh' ? '闪闪' : 'Twinkle'} className="h-16 w-14 object-contain drop-shadow-lg" />
+          <span className="rounded-full bg-otter-orange px-3 py-0.5 text-white shadow-sm">{lang === 'zh' ? '闪闪' : 'Twinkle'}</span>
+          <span>{lang === 'zh' ? '先试试让小水獭动起来！' : 'Try moving the little otter first!'}</span>
+          <span className="text-otter-orange">{lang === 'zh' ? '按亮起来的按钮～' : 'Press the lit-up button~'}</span>
         </div>
       </div>
     </motion.div>

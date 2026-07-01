@@ -146,7 +146,11 @@ function ParkourLoading() {
 
 
 export default function App() {
-  const [lang, setLang] = useState<Language>('zh');
+  // 语言初始化：从 URL ?lang=en 读一次（英文部署链接从此真正以英文启动；否则默认中文）。
+  // 只定初始值，Navbar 的 toggleLang 手动切换照旧可用。
+  const [lang, setLang] = useState<Language>(() =>
+    new URLSearchParams(window.location.search).get('lang')?.toLowerCase() === 'en' ? 'en' : 'zh'
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   // 跑酷 section 的「接近视口」门控：滚到 intro(前一屏)附近就触发，提前加载 Three.js chunk。
   const [parkourRef, nearParkour] = useNearViewport('200% 0px');

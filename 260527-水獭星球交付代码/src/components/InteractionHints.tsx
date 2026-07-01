@@ -1,7 +1,9 @@
 import { MousePointerClick, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useLang } from '../App';
 
 export function TapToContinueHint({ className = '' }: { className?: string }) {
+  const { lang } = useLang();
   return (
     <motion.div
       className={`pointer-events-none flex items-center justify-center gap-2 text-otter-orange font-display font-bold ${className}`}
@@ -18,7 +20,7 @@ export function TapToContinueHint({ className = '' }: { className?: string }) {
         <MousePointerClick className="w-6 h-6" strokeWidth={3} />
       </motion.div>
       <span className="rounded-full bg-white px-3 py-1 shadow-md border-2 border-otter-orange/30">
-        点一下继续！
+        {lang === 'zh' ? '点一下继续！' : 'Tap to continue!'}
       </span>
     </motion.div>
   );

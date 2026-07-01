@@ -139,13 +139,13 @@ const PICK_CARD_WIDTH = 150; // 单张选项卡宽度(px)。改大/改小这里�
 const PICK_CARD_LABEL_BOTTOM = '6%'; // ⭐ 想调标签上下位置，只改这一个值：数字越大越靠下，越小越靠上。
 
 // 选图卡英文标签（id → 英文卡片名称）
-const PICK_CARD_LABELS: Record<string, string> = {
-  '1-1': 'Kiwi',
-  '1-2': 'Moon Sprite',
-  '1-3': 'Jiligulu',
-  '2-1': 'A Rock',
-  '2-2': 'The Moon',
-  '2-3': 'Jiligulu',
+const PICK_CARD_LABELS: Record<string, { zh: string; en: string }> = {
+  '1-1': { zh: 'kiwi',     en: 'Kiwi' },
+  '1-2': { zh: '月亮精灵', en: 'Moon Sprite' },
+  '1-3': { zh: '叽里咕噜', en: 'Jiligulu' },
+  '2-1': { zh: '石头',     en: 'A Rock' },
+  '2-2': { zh: '月亮',     en: 'The Moon' },
+  '2-3': { zh: '叽里咕噜', en: 'Jiligulu' },
 };
 
 // 🎬 步骤机配置（11 步）──────────────────────────────────────────────────
@@ -901,7 +901,7 @@ export default function SectionVisualNovel({ onComplete }: { onComplete?: () => 
                      >
                        <img src={ASSET.pickCard(id)} alt="" className="w-full object-contain drop-shadow-lg rounded-2xl" />
                        <span className="absolute left-0 right-0 text-center text-sm md:text-base font-bold text-otter-text leading-tight" style={{ bottom: PICK_CARD_LABEL_BOTTOM }}>
-                         {PICK_CARD_LABELS[id] ?? id}
+                         {PICK_CARD_LABELS[id] ? (lang === 'zh' ? PICK_CARD_LABELS[id].zh : PICK_CARD_LABELS[id].en) : id}
                        </span>
                      </button>
                    );

@@ -1104,7 +1104,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
             transition={{ duration: 0.2, y: { repeat: Infinity, duration: 1.2, ease: 'easeInOut' } }}
             className="absolute z-30 left-1/2 top-[30%] -translate-x-1/2 rounded-full bg-white/95 border-4 border-yellow-300 px-6 py-3 text-2xl font-display font-black text-otter-orange shadow-xl pointer-events-none"
           >
-            往星星那里走！
+            {lang === 'zh' ? '往星星那里走！' : 'Head for the star!'}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1632,7 +1632,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
             transition={{ duration: 0.2, y: { repeat: Infinity, duration: 1.2, ease: 'easeInOut' } }}
             className="absolute z-40 left-1/2 top-8 -translate-x-1/2 rounded-full border-4 border-yellow-300 bg-white/82 px-5 py-2 text-center font-display text-lg font-black text-otter-orange shadow-xl backdrop-blur-sm pointer-events-none"
           >
-            跟着箭头去第一颗星星！
+            {lang === 'zh' ? '跟着箭头去第一颗星星！' : 'Follow the arrow to the first star!'}
           </motion.div>
         )}
       </AnimatePresence>
