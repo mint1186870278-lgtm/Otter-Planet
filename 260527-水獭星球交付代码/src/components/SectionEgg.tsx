@@ -8,8 +8,8 @@ const SUBMIT_URL = import.meta.env.VITE_EGG_SUBMIT_URL || '/api/otter-egg';
 // 演示模式：VITE_EGG_DEMO=true 时跳过真实请求，直接走 success（端点没好也能完整演示）
 const DEMO_MODE = import.meta.env.VITE_EGG_DEMO === 'true';
 
-// 小水獭插画图位：把图放到 public/otter-baby.png 即可自动启用；缺图时回退 emoji 🥚
-const EGG_IMG = '/otter-baby.png';
+// 小水獭插画图位：把图放到 public/otter-baby.webp 即可自动启用；缺图时回退 emoji 🦦
+const EGG_IMG = '/otter-baby.webp';
 
 // 邮箱格式校验（仅英文版用；中文版留微信号不做格式校验）
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -121,7 +121,7 @@ export const TREE_ROUND_URL = '/3d-tree/optimized/tree1-round.glb?v=3';
 export const BUSH_URL = '/3d-tree/optimized/bush.glb?v=3';
 // idle.glb 单文件自包含：同一网格同一骨骼，内含 4 条动画。
 // 用它的 #1=站立、#2=跑步，clip 与网格同源，绑定天然成立（避免跨文件绑定导致的 T-pose）。
-export const CHARACTER_URL = '/main-character-other-position/idle.glb?v=20260627-uncompressed';
+export const CHARACTER_URL = '/main-character-other-position/idle.glb?v=20260701-meshopt';
 export const IDLE_CLIP_INDEX = 1; // 站立待机（≈4.27s，几乎不动）
 export const RUN_CLIP_INDEX = 2;  // 跑步（≈0.67s，腿大幅摆动）
 // 注：另有 #0≈走路、#3≈跳跃，备用。run-3/run.glb 已不再需要加载。

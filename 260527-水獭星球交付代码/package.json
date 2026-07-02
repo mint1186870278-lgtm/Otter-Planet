@@ -13,7 +13,8 @@
     "test": "tsx src/lib/controlTutorial.test.ts && tsx src/lib/interactionHints.test.ts && tsx src/lib/fishAudio.test.ts",
     "optimize:terrain": "node scripts/optimize-terrain.mjs",
     "optimize:terrain-tex": "node scripts/optimize-terrain-textures.mjs",
-    "optimize:images": "node scripts/optimize-images.mjs"
+    "optimize:images": "node scripts/optimize-images.mjs",
+    "optimize:character": "node scripts/optimize-character.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

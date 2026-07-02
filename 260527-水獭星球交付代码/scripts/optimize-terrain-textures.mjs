@@ -59,10 +59,13 @@ const doc = await io.read(FILE);
 const sigBefore = signature(doc);
 
 await doc.transform(
-  // baseColor 是地面/花草可见颜色：4096²/2048² → 1024² webp，保清晰但显存骤降。
-  textureCompress({ encoder: sharp, targetFormat: 'webp', quality: 86, resize: [1024, 1024], slots: /baseColor/ }),
-  // 金属粗糙度：非颜色数据，1024² webp q82 足够。
-  textureCompress({ encoder: sharp, targetFormat: 'webp', quality: 82, resize: [1024, 1024], slots: /metallicRoughness/ }),
+  // baseColor 是地面/花草可见颜色：4096²→2048² webp q92，保 sRGB。保守档：肉眼几乎无损，
+  //   但每张显存 89MB→22MB（10 张省 ~670MB），磁盘也降。⚠️不用上次 1024/q86 那种激进档(会变色)。
+  textureCompress({ encoder: sharp, targetFormat: 'webp', quality: 92, resize: [2048, 2048], slots: /baseColor/ }),
+  // 金属粗糙度是线性数据：4096²→2048² webp q90。⚠️不用 lossless（实测 lossless 反而把 342KB
+  //   的小 JPEG 涨成 2MB，吃光 baseColor 的收益）。q90 对粗糙度的失真极小，且这些 MR 只影响
+  //   烘焙进地形的花草/植物小装饰，不碰松树/草地(那两个是 config/shader 定色)，风险很低。
+  textureCompress({ encoder: sharp, targetFormat: 'webp', quality: 90, resize: [2048, 2048], slots: /metallicRoughness/ }),
 );
 
 const sigAfter = signature(doc);
@@ -80,9 +83,11 @@ if (diffs !== 0) {
   process.exit(1);
 }
 
-// 先写临时文件，成功后原子替换，避免半截产出损坏部署文件。
+// 先写临时文件，成功后替换，避免半截产出损坏部署文件。
 await io.write(TMP, doc);
-fs.renameSync(TMP, FILE);
+// Windows 下 rename 覆盖已存在文件可能 EPERM；改 copy 覆盖 + 删临时，稳。
+fs.copyFileSync(TMP, FILE);
+fs.rmSync(TMP, { force: true });
 
 const after = fs.statSync(FILE).size;
 console.log(`NURBS 节点: ${sigBefore.length} -> ${sigAfter.length}  transform diffs: ${diffs}  ✅ 对齐保留`);
