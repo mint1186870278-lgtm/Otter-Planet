@@ -14,6 +14,7 @@ import {
 } from '../parkourConstants';
 import { occluderRef, snapGroundY, _obstacleCaster, _obstacleOrigin, _obstacleDown } from './runtime';
 import { FloatingLabel, QuestionBoxBadge } from './widgets';
+import { loadTerrainHeightfield, sampleTerrainHeight } from './navmesh/terrainHeightfield';
 
 // 碰到触发红屏（带迟滞防重复）。生成时避开星星/NPC，不盖道具。
 export type ActiveObstacle = { id: number; variant: 0 | 1 | 2; x: number; z: number };
@@ -58,15 +59,35 @@ function ObstacleObject({ obstacle, playerPosRef, hitBurstId, softFocus, onHit, 
 
   // 生成时吸附到真实地面高度，避免在斜坡上浮空或陷地
   useEffect(() => {
+    let cancelled = false;
+    if (!groupRef.current) return;
+    const heightfieldY = sampleTerrainHeight(obstacle.x, obstacle.z);
+    if (heightfieldY !== null) {
+      groupRef.current.position.y = heightfieldY;
+      return;
+    }
     const terrain = occluderRef.current;
-    if (!terrain || !groupRef.current) return;
+    if (!terrain) {
+      void loadTerrainHeightfield().then((heightfield) => {
+        const y = heightfield?.sampleHeight(obstacle.x, obstacle.z);
+        if (!cancelled && y !== null && y !== undefined && groupRef.current) {
+          groupRef.current.position.y = y;
+        }
+      });
+      return () => { cancelled = true; };
+    }
     _obstacleOrigin.set(obstacle.x, 50, obstacle.z);
     _obstacleCaster.set(_obstacleOrigin, _obstacleDown);
     _obstacleCaster.far = 100;
     const hits = _obstacleCaster.intersectObject(terrain, true);
     const groundY = snapGroundY(hits);
     groupRef.current.position.y = groundY;
+    return () => { cancelled = true; };
   }, [obstacle.x, obstacle.z]);
+
+  useEffect(() => {
+    void loadTerrainHeightfield();
+  }, []);
 
   useEffect(() => {
     if (hitBurstId === obstacle.id) setShakeUntil(Date.now() + 320);

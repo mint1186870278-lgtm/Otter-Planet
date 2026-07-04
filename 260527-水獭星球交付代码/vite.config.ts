@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import {readdir, readFile, stat, writeFile} from 'node:fs/promises';
 import path from 'path';
 import {defineConfig, type Plugin} from 'vite';
 
@@ -21,7 +22,31 @@ function assetVersionStamp(): Plugin {
   // 匹配：以单个 / 开头(非 :// 外链、非 ./相对import) + 已知资源扩展名 + 可选已有 ?v=旧戳。
   // 负向后顾 (?<![:\w/.]) 排除 https://cdn.../x.png 和 import '../../星星闪闪.png'。
   const RE =
-    /(?<![:\w/.])(\/[^"'`\s)]+?\.(?:webp|glb|gltf|png|jpe?g|svg|mp3|wav|hdr|ktx2|bin))(\?v=[\w.\-]+)?/g;
+    /(?<![:\w/.])(\/[^"'`\s)]+?\.(?:webp|glb|gltf|png|jpe?g|svg|mp3|wav|hdr|ktx2|bin|json))(\?v=[\w.\-]+)?/g;
+
+  const PUBLIC_ENTRY_RE =
+    /(?<![:\w/.])(\/[^"'`\s)]+?\.(?:css|js|webp|glb|gltf|png|jpe?g|svg|mp3|wav|hdr|ktx2|bin|json))(\?v=[\w.\-]+)?/g;
+
+  const stampPublicUrls = (code: string, includeEntryAssets = false) => {
+    const re = includeEntryAssets ? PUBLIC_ENTRY_RE : RE;
+    return code.replace(re, (m, url, _ver, offset, str) => {
+      const before = str.slice(Math.max(0, offset - 6), offset);
+      if (!includeEntryAssets && /url\(\s*['"]?$/.test(before)) return m;
+      return `${url}?v=${BUILD_ID}`;
+    });
+  };
+
+  async function* walk(dir: string): AsyncGenerator<string> {
+    for (const entry of await readdir(dir, {withFileTypes: true})) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'assets') continue;
+        yield* walk(full);
+      } else {
+        yield full;
+      }
+    }
+  }
 
   return {
     name: 'asset-version-stamp',
@@ -30,19 +55,30 @@ function assetVersionStamp(): Plugin {
     config() {
       return {define: {__BUILD_ID__: JSON.stringify(BUILD_ID)}};
     },
+    transformIndexHtml(html) {
+      return stampPublicUrls(html, true);
+    },
     transform(code, id) {
       if (id.includes('node_modules')) return null;
       if (!/\.(t|j)sx?$/.test(id.split('?')[0])) return null;
-      if (!/\.(webp|glb|gltf|png|jpe?g|svg|mp3|wav|hdr|ktx2|bin)/.test(code)) return null;
-      const out = code.replace(RE, (m, url, _ver, offset, str) => {
-        // 跳过 CSS url(...) 里的路径:Tailwind 的 bg-[url(...)] 任意值类是按源码原文生成 CSS 的,
-        // 若给运行时类名加 ?v= 会和生成的 CSS 类名对不上 → 背景失效。内联 style 的 url() 加不加
-        // 戳都能正常加载,这里统一不加最稳。普通字符串(img src 等)照常加戳。
-        const before = str.slice(Math.max(0, offset - 6), offset);
-        if (/url\(\s*['"]?$/.test(before)) return m;
-        return `${url}?v=${BUILD_ID}`;
-      });
+      if (!/\.(webp|glb|gltf|png|jpe?g|svg|mp3|wav|hdr|ktx2|bin|json)/.test(code)) return null;
+      const out = stampPublicUrls(code);
       return out === code ? null : {code: out, map: null};
+    },
+    async closeBundle() {
+      const outDir = path.resolve(process.cwd(), 'dist');
+      try {
+        if (!(await stat(outDir)).isDirectory()) return;
+      } catch {
+        return;
+      }
+
+      for await (const file of walk(outDir)) {
+        if (!/\.(html|css|js)$/.test(file)) continue;
+        const code = await readFile(file, 'utf8');
+        const out = stampPublicUrls(code, true);
+        if (out !== code) await writeFile(file, out, 'utf8');
+      }
     },
   };
 }

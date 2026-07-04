@@ -94,8 +94,20 @@ app.post('/api/fish-tts', async (req, res) => {
   res.send(audio);
 });
 
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, 'dist'), {
+  setHeaders(res, filePath) {
+    const normalized = filePath.replaceAll(path.sep, '/');
+    if (normalized.endsWith('/index.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return;
+    }
+    if (/\.(?:js|css|glb|gltf|bin|ktx2|webp|png|jpe?g|svg|mp3|m4a|wav|hdr)$/i.test(normalized)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  },
+}));
 app.get('*', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 

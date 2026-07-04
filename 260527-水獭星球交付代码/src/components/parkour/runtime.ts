@@ -13,6 +13,7 @@ import * as THREE from 'three';
 // 相机遮挡体：terrain（树/石/地面）挂到这里，供相机每帧射线检测——
 // 被树挡住主角时把相机拉到树前，主角始终可见。由 TerrainModel 挂载时赋值。
 export const occluderRef: { current: THREE.Object3D | null } = { current: null };
+export const cameraOccluderRef: { current: THREE.Object3D | null } = { current: null };
 // 地形跟随后主角的真实世界 Y，供 CameraRig 用（让相机始终在玩家正上方固定高度，不贴地）
 export const playerYRef: { current: number } = { current: 0 };
 

@@ -28,10 +28,10 @@
 
   function createTrack(src, name) {
     var audio = document.createElement("audio");
-    audio.src = src;
+    audio.dataset.src = src;
     audio.loop = true;
-    audio.preload = "auto";
-    audio.autoplay = true;
+    audio.preload = "metadata";
+    audio.autoplay = false;
     audio.volume = 0;
     audio.playsInline = true;
     audio.setAttribute("autoplay", "");
@@ -40,6 +40,12 @@
     audio.setAttribute("aria-hidden", "true");
     audio.style.display = "none";
     return audio;
+  }
+
+  function ensureTrackSource(track) {
+    if (!track.src && track.dataset && track.dataset.src) {
+      track.src = track.dataset.src;
+    }
   }
 
   function ensureTrackElements() {
@@ -162,28 +168,18 @@
     });
 
     if (!hasUserGesture) {
-      to.volume = 0;
-      to.play().then(function () {
-        hasUserGesture = true;
-        setAudioState({ hasUserGesture: true, lastPlayError: null });
-        fadeToActiveTrack(from, to);
-      }).catch(function (error) {
-        setAudioState({ lastPlayError: error && error.message ? error.message : String(error) });
-        refreshToggleButton();
-      });
       refreshToggleButton();
       return;
     }
 
+    ensureTrackSource(to);
+    if (from) ensureTrackSource(from);
     fadeToActiveTrack(from, to);
   }
 
   function warmupAndTryAutoplay() {
     ensureTrackElements();
-    Object.keys(tracks).forEach(function (trackName) {
-      tracks[trackName].load();
-    });
-    requestPlay(getDesiredTrackName());
+    refreshToggleButton();
   }
 
   function fadeToActiveTrack(from, to) {

@@ -1251,6 +1251,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
                 guideStarId={guidedStarId}
                 obstacleBurstId={obstacleBurstId}
                 softFocusInteractives={isControlTutorialActive || gameState === 'starGuide'}
+                loadNpcModels={controlTutorialComplete || gameState !== 'tutorial'}
                 onCollect={handleCollect}
                 onObstacleHit={handleObstacleHit}
                 onNpcApproach={handleNpcApproach}

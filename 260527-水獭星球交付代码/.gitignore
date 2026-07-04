@@ -13,3 +13,5 @@ coverage/
 
 # 大体积母文件归档 — 不打包不入库
 _archive-large-source/
+deploy/
+_tmp_auth_assets/

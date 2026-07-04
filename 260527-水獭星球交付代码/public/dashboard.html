@@ -402,6 +402,9 @@ const I18N = {
     cardSessions: '总会话数', cardSessionsSub: '去重 sessionId（含任意事件）',
     cardSubTotal: '留资总数', cardSubTotalSub: '提交联系方式',
     cardSubmit: '留资提交动作',
+    cardChildRegister: '小朋友注册',
+    cardParentRegister: '家长注册',
+    cardRegisterSub: '注册按钮提交',
     cardMsgTotal: '留言总数', cardMsgTotalSub: '含留言内容的提交',
     aggFail: '聚合计算失败', errOverview: '概览数据加载失败：',
     updatedAt: '数据更新于 ', countCnt: '次', countSession: '个', countItem: '条',
@@ -440,6 +443,9 @@ const I18N = {
     cardSessions: 'Total Sessions', cardSessionsSub: 'unique sessionId (any event)',
     cardSubTotal: 'Total Leads', cardSubTotalSub: 'submitted contacts',
     cardSubmit: 'Submit Actions',
+    cardChildRegister: 'Kid Registrations',
+    cardParentRegister: 'Parent Registrations',
+    cardRegisterSub: 'register submit',
     cardMsgTotal: 'Total Messages', cardMsgTotalSub: 'submissions with a message',
     aggFail: 'Aggregate failed', errOverview: 'Failed to load overview: ',
     updatedAt: 'Updated at ', countCnt: '', countSession: '', countItem: '',
@@ -460,6 +466,8 @@ const EVENT_LABELS = {
   retention_form_open: ['点击想看后续', 'Clicked See More'],
   retention_submit:    ['留资提交', 'Lead Submit'],
   retention_skip:      ['跳过留资', 'Lead Skip'],
+  auth_register_submit: ['注册提交', 'Register Submit'],
+  user_create:          ['账号创建成功', 'User Created'],
 };
 // section / stage / scene 子标签（用于 payload 友好展示）
 const SUB_LABELS = {
@@ -784,6 +792,8 @@ function renderCards() {
   const followClick = getEventCount('retention_form_open');
   const voiceCount  = getEventCount('voice_start');
   const submitCount = getEventCount('retention_submit');
+  const childRegisterCount = viewEvents().filter(it => it.event === 'auth_register_submit' && it.payload?.role === 'child').length;
+  const parentRegisterCount = viewEvents().filter(it => it.event === 'auth_register_submit' && it.payload?.role === 'guardian').length;
 
   wrap.innerHTML = `
     <div class="card hl">
@@ -825,6 +835,16 @@ function renderCards() {
       <div class="label"><span class="dot" style="background:var(--green)"></span>${t('cardSubmit')}</div>
       <div class="value">${submitCount}<span class="unit">${t('countCnt')}</span></div>
       <div class="sub">retention_submit</div>
+    </div>
+    <div class="card">
+      <div class="label"><span class="dot" style="background:var(--blue)"></span>${t('cardChildRegister')}</div>
+      <div class="value">${childRegisterCount}<span class="unit">${t('countCnt')}</span></div>
+      <div class="sub">${t('cardRegisterSub')} · child</div>
+    </div>
+    <div class="card">
+      <div class="label"><span class="dot" style="background:var(--orange)"></span>${t('cardParentRegister')}</div>
+      <div class="value">${parentRegisterCount}<span class="unit">${t('countCnt')}</span></div>
+      <div class="sub">${t('cardRegisterSub')} · guardian</div>
     </div>
   `;
 }

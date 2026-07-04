@@ -11,7 +11,10 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test": "tsx src/lib/controlTutorial.test.ts && tsx src/lib/interactionHints.test.ts && tsx src/lib/fishAudio.test.ts",
+    "report:assets": "node scripts/report-assets.mjs",
+    "bake:terrain-heightfield": "node scripts/bake-terrain-heightfield.mjs",
     "optimize:terrain": "node scripts/optimize-terrain.mjs",
+    "optimize:terrain-meshopt-candidate": "node scripts/optimize-terrain-meshopt-candidate.mjs",
     "optimize:terrain-tex": "node scripts/optimize-terrain-textures.mjs",
     "optimize:images": "node scripts/optimize-images.mjs",
     "optimize:character": "node scripts/optimize-character.mjs"

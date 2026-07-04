@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "source": "scene-terrain-opt.glb",
+  "sourceSha256": "08cd22ca13dd0699f264edbc8e541ad3148d10261473281ff207add83369398c",
+  "generatedAt": "2026-07-04T03:13:52.506Z",
+  "cellSize": 1,
+  "minX": -120,
+  "maxX": 120,
+  "minZ": -120,
+  "maxZ": 120,
+  "width": 241,
+  "height": 241,
+  "bin": "terrain-heightfield.bin",
+  "transform": {
+    "autoScale": 1.3008272501729492,
+    "offset": [
+      -2.5649490940893416,
+      -0.2746017793968557,
+      108.07007943846499
+    ],
+    "anchorX": 1.9717830278757793,
+    "anchorZ": 3.0210933550265935,
+    "surfaceTopY": 0.2110978066921234
+  },
+  "stats": {
+    "samples": 58081,
+    "filled": 24571,
+    "coverage": 0.423,
+    "acceptedTriangles": 1921956,
+    "skippedTriangles": 3153842
+  }
+}

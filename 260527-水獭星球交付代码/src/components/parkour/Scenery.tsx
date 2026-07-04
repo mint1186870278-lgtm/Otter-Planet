@@ -16,7 +16,8 @@ import {
   CHAR_FOOT_Y, HEIGHT_SPLIT_Y, PLAYER_START,
   GROUND_DETAIL, FLOWER_GLB, SCATTER_TINT, TREE_ROUND_URL, BUSH_URL,
 } from './config';
-import { occluderRef, snapGroundY } from './runtime';
+import { cameraOccluderRef, occluderRef, snapGroundY } from './runtime';
+import { loadTerrainHeightfield, sampleTerrainHeight } from './navmesh/terrainHeightfield';
 
 // ── 松树冠深度分色 shader 补丁 ────────────────────────────────────────────────
 // 给松树冠材质注入 onBeforeCompile：vertex 阶段把世界坐标传给 fragment，fragment 按世界 Z
@@ -45,6 +46,66 @@ function patchPineDepth(mat: THREE.MeshStandardMaterial) {
       }`);
   };
   mat.needsUpdate = true;
+}
+
+export function LowTerrainShell() {
+  const groupRef = useRef<THREE.Group>(null!);
+  const pathSlabs = useMemo(() => {
+    const slabs: Array<{ pos: [number, number, number]; scale: [number, number, number]; rot: number }> = [];
+    for (let i = 0; i < 28; i++) {
+      const t = i / 27;
+      const z = THREE.MathUtils.lerp(114, -28, t);
+      const x = Math.sin(t * Math.PI * 2.1) * 4.2;
+      slabs.push({
+        pos: [x, 0.03, z],
+        scale: [5.8 + Math.sin(i * 1.7) * 0.5, 0.06, 3.3],
+        rot: Math.sin(i * 0.73) * 0.16,
+      });
+    }
+    return slabs;
+  }, []);
+
+  useEffect(() => {
+    if (!groupRef.current) return;
+    occluderRef.current = groupRef.current;
+    return () => {
+      if (occluderRef.current === groupRef.current) occluderRef.current = null;
+    };
+  }, []);
+
+  return (
+    <group ref={groupRef}>
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[TERRAIN_SIZE, TERRAIN_SIZE]} />
+        <meshStandardMaterial color="#b8df7a" roughness={0.92} metalness={0} />
+      </mesh>
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 83]}>
+        <planeGeometry args={[22, 74]} />
+        <meshStandardMaterial color="#d1e98d" roughness={0.95} metalness={0} />
+      </mesh>
+      {pathSlabs.map((slab, index) => (
+        <mesh
+          key={index}
+          castShadow
+          receiveShadow
+          position={slab.pos}
+          rotation={[0, slab.rot, 0]}
+          scale={slab.scale}
+        >
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color={index % 3 === 0 ? '#f4cf7a' : '#e8bf69'} roughness={0.86} metalness={0} />
+        </mesh>
+      ))}
+      <mesh position={[-18, 0.18, 96]} scale={[1.7, 0.36, 1.7]}>
+        <sphereGeometry args={[1, 16, 8]} />
+        <meshStandardMaterial color="#7fd23c" roughness={0.9} metalness={0} />
+      </mesh>
+      <mesh position={[18, 0.18, 104]} scale={[1.9, 0.34, 1.9]}>
+        <sphereGeometry args={[1, 16, 8]} />
+        <meshStandardMaterial color="#35c99a" roughness={0.9} metalness={0} />
+      </mesh>
+    </group>
+  );
 }
 
 // ── terrain model — 静态单块大地图（去掉了滚动 / 循环）────────────────────────
@@ -417,6 +478,74 @@ const TREE_SCATTER: ScatterItem[] = (() => {
 // 模型半高（Y∈[-0.95,0.95]）：放置时整体抬 0.95*scale 让底部贴 y=0 地面。
 const SCATTER_HALF_H = 0.95;
 
+export function CameraOccluders() {
+  const groupRef = useRef<THREE.Group>(null!);
+  const round = useMemo(() => TREE_SCATTER.filter(t => t.kind === 'round'), []);
+  const bush = useMemo(() => TREE_SCATTER.filter(t => t.kind === 'bush'), []);
+  const roundGeo = useMemo(() => new THREE.CylinderGeometry(1, 1, 1, 8), []);
+  const bushGeo = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
+  const mat = useMemo(() => new THREE.MeshBasicMaterial({
+    colorWrite: false,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0,
+  }), []);
+  const roundRef = useRef<THREE.InstancedMesh>(null!);
+  const bushRef = useRef<THREE.InstancedMesh>(null!);
+
+  useEffect(() => {
+    if (!groupRef.current) return;
+    cameraOccluderRef.current = groupRef.current;
+    return () => {
+      if (cameraOccluderRef.current === groupRef.current) cameraOccluderRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => () => {
+    roundGeo.dispose();
+    bushGeo.dispose();
+    mat.dispose();
+  }, [roundGeo, bushGeo, mat]);
+
+  useEffect(() => {
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const pos = new THREE.Vector3();
+    const scl = new THREE.Vector3();
+    if (roundRef.current) {
+      round.forEach((t, i) => {
+        const radius = Math.max(0.8, t.scale * 0.38);
+        const h = Math.max(4, t.scale * 1.55);
+        pos.set(t.x, h / 2 + (t.yOff ?? 0) - 0.35, t.z);
+        scl.set(radius, h, radius);
+        m.compose(pos, q, scl);
+        roundRef.current.setMatrixAt(i, m);
+      });
+      roundRef.current.instanceMatrix.needsUpdate = true;
+      roundRef.current.computeBoundingSphere();
+    }
+    if (bushRef.current) {
+      bush.forEach((t, i) => {
+        const r = Math.max(0.8, t.scale * 0.62);
+        const h = Math.max(1.5, t.scale * 0.95);
+        pos.set(t.x, h / 2 + (t.yOff ?? 0) - 0.2, t.z);
+        scl.set(r * 2, h, r * 2);
+        m.compose(pos, q, scl);
+        bushRef.current.setMatrixAt(i, m);
+      });
+      bushRef.current.instanceMatrix.needsUpdate = true;
+      bushRef.current.computeBoundingSphere();
+    }
+  }, [round, bush]);
+
+  return (
+    <group ref={groupRef}>
+      {round.length > 0 && <instancedMesh ref={roundRef} args={[roundGeo, mat, round.length]} frustumCulled={false} />}
+      {bush.length > 0 && <instancedMesh ref={bushRef} args={[bushGeo, mat, bush.length]} frustumCulled={false} />}
+    </group>
+  );
+}
+
 // ── 地面细节散布数据 — 确定性 LCG 一次性生成（模块级缓存，绝不在渲染期 random）──────
 // 小花/草丛，撒满探索区，避开石板路带与出生点。地形是斜坡，y 由渲染期射线吸附。
 type GroundKind = 'white' | 'yellow' | 'grass' | 'blue' | 'purple';
@@ -494,6 +623,10 @@ function InstancedGroundDetail({ geometry, material, items }: {
   const snapped = useRef(false);
   const raycaster = useRef(new THREE.Raycaster());
 
+  useEffect(() => {
+    void loadTerrainHeightfield();
+  }, []);
+
   // 初始按 y=0 兜底摆好（地形射线未就绪时，避免第一帧堆在原点）
   useEffect(() => {
     if (!ref.current) return;
@@ -516,17 +649,21 @@ function InstancedGroundDetail({ geometry, material, items }: {
   useFrame(() => {
     if (snapped.current || !ref.current) return;
     const occ = occluderRef.current;
-    if (!occ) return;
+    if (!occ && sampleTerrainHeight(items[0]?.x ?? 0, items[0]?.z ?? 0) === null) return;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion();
     const pos = new THREE.Vector3(), scl = new THREE.Vector3();
     const from = new THREE.Vector3(), down = new THREE.Vector3(0, -1, 0);
     const yAxis = new THREE.Vector3(0, 1, 0);
     items.forEach((it, i) => {
-      from.set(it.x, 150, it.z);
-      raycaster.current.set(from, down);
-      raycaster.current.far = 400;
-      const hits = raycaster.current.intersectObject(occ, true);
-      const groundY = snapGroundY(hits);
+      let groundY = sampleTerrainHeight(it.x, it.z);
+      if (groundY === null && occ) {
+        from.set(it.x, 150, it.z);
+        raycaster.current.set(from, down);
+        raycaster.current.far = 400;
+        const hits = raycaster.current.intersectObject(occ, true);
+        groundY = snapGroundY(hits);
+      }
+      if (groundY === null) groundY = 0;
       pos.set(it.x, groundY + it.scale, it.z);
       q.setFromAxisAngle(yAxis, it.rotY);
       scl.setScalar(it.scale);
@@ -642,6 +779,10 @@ function InstancedGLBFlower({ url, items }: { url: string; items: FlowerItem[] }
   const snapped = useRef(false);
   const raycaster = useRef(new THREE.Raycaster());
 
+  useEffect(() => {
+    void loadTerrainHeightfield();
+  }, []);
+
   const { geometry, material, modelH, baseOffset } = useMemo(() => {
     let geo: THREE.BufferGeometry | null = null;
     let mat: THREE.Material | null = null;
@@ -671,12 +812,17 @@ function InstancedGLBFlower({ url, items }: { url: string; items: FlowerItem[] }
     items.forEach((it, i) => {
       const s = it.scale / modelH;       // 世界目标高度 → 实例缩放系数
       let groundY = 0;
-      if (toGround && occ) {
-        from.set(it.x, 150, it.z);
-        raycaster.current.set(from, down);
-        raycaster.current.far = 400;
-        const hits = raycaster.current.intersectObject(occ, true);
-        groundY = snapGroundY(hits);
+      if (toGround) {
+        const heightfieldY = sampleTerrainHeight(it.x, it.z);
+        if (heightfieldY !== null) {
+          groundY = heightfieldY;
+        } else if (occ) {
+          from.set(it.x, 150, it.z);
+          raycaster.current.set(from, down);
+          raycaster.current.far = 400;
+          const hits = raycaster.current.intersectObject(occ, true);
+          groundY = snapGroundY(hits);
+        }
       }
       pos.set(it.x, groundY + baseOffset * s, it.z);
       q.setFromAxisAngle(yAxis, it.rotY);
@@ -692,7 +838,8 @@ function InstancedGLBFlower({ url, items }: { url: string; items: FlowerItem[] }
   useEffect(() => { place(false); snapped.current = false; }, [items, geometry]);
   // 地形就绪 → 一次性吸附
   useFrame(() => {
-    if (snapped.current || !ref.current || !occluderRef.current) return;
+    if (snapped.current || !ref.current) return;
+    if (!occluderRef.current && sampleTerrainHeight(items[0]?.x ?? 0, items[0]?.z ?? 0) === null) return;
     place(true);
     snapped.current = true;
   });
@@ -749,6 +896,10 @@ function InstancedScatter({ url, items, tint }: { url: string; items: ScatterIte
   const snapped = useRef(false);
   const raycaster = useRef(new THREE.Raycaster());
 
+  useEffect(() => {
+    void loadTerrainHeightfield();
+  }, []);
+
   // 初始：先按固定 y=0 基准摆好（地形射线未就绪时的兜底位置，避免第一帧全在原点）
   useEffect(() => {
     if (!ref.current) return;
@@ -773,7 +924,7 @@ function InstancedScatter({ url, items, tint }: { url: string; items: ScatterIte
   useFrame(() => {
     if (snapped.current || !ref.current) return;
     const occ = occluderRef.current;
-    if (!occ) return; // 地形还没加载，下一帧再试
+    if (!occ && sampleTerrainHeight(items[0]?.x ?? 0, items[0]?.z ?? 0) === null) return; // 地形还没加载，下一帧再试
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const pos = new THREE.Vector3();
@@ -782,11 +933,15 @@ function InstancedScatter({ url, items, tint }: { url: string; items: ScatterIte
     const down = new THREE.Vector3(0, -1, 0);
     const yAxis = new THREE.Vector3(0, 1, 0);
     items.forEach((t, i) => {
-      from.set(t.x, 150, t.z);
-      raycaster.current.set(from, down);
-      raycaster.current.far = 400;
-      const hits = raycaster.current.intersectObject(occ, true);
-      const groundY = snapGroundY(hits);
+      let groundY = sampleTerrainHeight(t.x, t.z);
+      if (groundY === null && occ) {
+        from.set(t.x, 150, t.z);
+        raycaster.current.set(from, down);
+        raycaster.current.far = 400;
+        const hits = raycaster.current.intersectObject(occ, true);
+        groundY = snapGroundY(hits);
+      }
+      if (groundY === null) groundY = 0;
       pos.set(t.x, groundY + SCATTER_HALF_H * t.scale + (t.yOff ?? 0), t.z);
       q.setFromAxisAngle(yAxis, t.rotY);
       scl.setScalar(t.scale);

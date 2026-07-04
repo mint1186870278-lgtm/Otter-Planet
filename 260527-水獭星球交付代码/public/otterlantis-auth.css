@@ -1,3 +1,268 @@
+﻿:root {
+  --auth-orange: #f28a18; /* 主题橙色：注册按钮、强调色。想更亮改浅，想更稳改深。 */
+  --auth-orange-dark: #b9600f; /* 深橙色：按钮阴影/压暗备用色。 */
+  --auth-blue: #bfe2f5; /* 浅蓝色：家长/辅助区域底色。 */
+  --auth-blue-strong: #1768a4; /* 深蓝色：蓝色文字或强调备用色。 */
+  --auth-blue-text: #14527b; /* 蓝色按钮文字。想更明显就改深。 */
+  --auth-brown: #5a3b1e; /* 主文字棕色。影响表单标题、标签等。 */
+  --auth-brown-soft: #8a6337; /* 辅助文字棕色。影响说明文字。 */
+  --auth-paper: #fff4d8; /* 纸张备用底色。 */
+  --auth-line: #dfbd72; /* 边线备用色。 */
+  --auth-danger: #b84a2a; /* 错误提示颜色。 */
+  --auth-success: #277a35; /* 成功提示颜色。 */
+
+  /* 登录/注册页调参区：改下面这些变量就能调大小和上下左右。
+     标题大小：改 --auth-identity-title-size。
+     两张身份卡整体位置/大小：改 --auth-identity-cards-w / x / y / scale。 */
+  --auth-panel-max-width: 980px; /* 整个弹窗最大宽度。变大=整体可更宽。 */
+
+  --auth-identity-width: min(94vw, 980px); /* 第 1 页身份选择纸张整体宽度。 */
+  --auth-identity-paper-x: 0%; /* 第 1 页纸张背景左右位置。正数向右，负数向左。 */
+  --auth-identity-paper-y: 0%; /* 第 1 页纸张背景上下位置。正数向下，负数向上。 */
+  --auth-identity-paper-w: 80%; /* 第 1 页纸张背景宽度。变大=纸更宽。 */
+  --auth-identity-paper-h: 100%; /* 第 1 页纸张背景高度。变大=纸更高。 */
+
+  --auth-identity-header-x: 0%; /* header-otter-decoration 左右位置。正数向右，负数向左。 */
+  --auth-identity-header-y: -15%; /* header-otter-decoration 上下位置。更小/更负=更贴纸张上边缘。 */
+  --auth-identity-header-w: 50%; /* header-otter-decoration 宽度。变大=装饰更大。 */
+  --auth-identity-header-h: 100%; /* header-otter-decoration 高度。变大=装饰更高。 */
+
+  --auth-identity-content-w: 80%; /* 第 1 页内部内容区宽度，包含标题和两张身份卡。 */
+  --auth-identity-content-y: 16%; /* 第 1 页内部内容整体上下位置。变大=整体往下。 */
+  --auth-identity-title-size: 900px; /* 欢迎标题图大小：只改这一个数。变大=标题更大，例如 900px；变小=标题更小，例如 650px。 */
+  --auth-identity-title-max-h: 300px; /* 欢迎标题图最大高度。标题被压扁/长不高时，把这里调大。 */
+  --auth-identity-title-x: 0px; /* 欢迎标题图左右微调。正数向右，负数向左。 */
+  --auth-identity-title-y: -60px; /* 欢迎标题图上下微调。只移动标题本身：正数向下，负数向上。 */
+
+  --auth-identity-cards-w: 90%; /* 两张身份卡整体宽度：只改这一个可整体变大/变小，例如 90% 或 110%。 */
+  --auth-identity-cards-x: 0px; /* 两张身份卡整体左右位置。正数向右，负数向左。 */
+  --auth-identity-cards-y: -20%; /* 两张身份卡整体上下位置。变大=整体往下，变小/负数=整体往上。 */
+  --auth-identity-cards-scale: 1; /* 两张身份卡整体缩放。1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-identity-card-w: 48%; /* 单张身份卡宽度。一般先不改，卡片太大/太小再改这里。 */
+  --auth-identity-card-gap: 1%; /* 两张身份卡之间的可见间距。变大=卡片分得更开，不会再自动压缩卡片。 */
+
+  --auth-child-card-otter-x: 3%; /* 小朋友卡里的水獭左右位置。变大=往右。 */
+  --auth-child-card-otter-bottom: 9%; /* 小朋友卡里的水獭离卡片底部距离。变大=往上。 */
+  --auth-child-card-otter-w: 40%; /* 小朋友卡里的水獭大小。变大=更大。 */
+  --auth-child-card-text-x: 40%; /* 小朋友卡里的文字图左右位置。变大=往右。 */
+  --auth-child-card-text-y: 6%; /* 小朋友卡里的文字图上下位置。变大=往下。 */
+  --auth-child-card-text-scale: 1.3; /* 小朋友卡文字图整体大小：只改这一个。1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-child-card-text-w: 40%; /* 小朋友卡里的文字图宽度。变大=更宽。 */
+  --auth-child-card-text-h: 43%; /* 小朋友卡里的文字图高度。变大=更高。 */
+  --auth-child-card-arrow-right: 25%; /* 小朋友卡箭头离右侧距离。变大=往左。 */
+  --auth-child-card-arrow-bottom: 13%; /* 小朋友卡箭头离底部距离。变大=往上。 */
+  --auth-child-card-arrow-y: 0px; /* 小朋友卡箭头上下微调：正数向下，负数向上。 */
+  --auth-child-card-arrow-w: 16%; /* 小朋友卡箭头大小。变大=更大。 */
+  --auth-child-card-arrow-scale: 1.4; /* 小朋友卡箭头整体大小：只改这一个。1=原大小，0.9=缩小，1.1=放大。 */
+
+  --auth-parent-card-house-right: 4%; /* 家长卡蓝房子离右侧距离。变大=往左。 */
+  --auth-parent-card-house-bottom: 6%; /* 家长卡蓝房子离底部距离。变大=往上。 */
+  --auth-parent-card-house-w: 51%; /* 家长卡蓝房子大小。变大=更大。 */
+  --auth-parent-card-text-x: 7%; /* 家长卡文字图左右位置。变大=往右。 */
+  --auth-parent-card-text-y: 15%; /* 家长卡文字图上下位置。变大=往下。 */
+  --auth-parent-card-text-scale: 1; /* 家长卡文字图整体大小：只改这一个。1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-parent-card-text-w: 43%; /* 家长卡文字图宽度。变大=更宽。 */
+  --auth-parent-card-text-h: 45%; /* 家长卡文字图高度。变大=更高。 */
+  --auth-parent-card-arrow-left: 20%; /* 家长卡箭头离左侧距离。变大=往右。 */
+  --auth-parent-card-arrow-y: 5px; /* 家长卡箭头上下微调：正数向下，负数向上。 */
+  --auth-parent-card-arrow-w: 16%; /* 家长卡箭头基础宽度。一般不用改，优先改下面 scale。 */
+  --auth-parent-card-arrow-scale: 1.3; /* 家长卡箭头整体大小：只改这一个。1=原大小，0.9=缩小，1.1=放大。 */
+
+  --auth-login-entry-y: 3.5%; /* 第 1 页“已有 ID 登录”按钮上下位置。变大=往下。 */
+  --auth-login-entry-h: 42px; /* 第 1 页“已有 ID 登录”按钮高度。变大=更高。 */
+
+  --auth-register-width: min(94vw, 500px); /* 第 2 页注册纸张整体宽度。 */
+  --auth-register-min-h: 680px; /* 第 2 页注册纸张最小高度。变大=整体更高。 */
+  --auth-register-x: 0px; /* 注册页整张纸左右位置：正数向右，负数向左。 */
+  --auth-register-y: 0px; /* 注册页整张纸上下位置：正数向下，负数向上。 */
+  --auth-register-scale: 1; /* 注册页整张纸整体大小：只改这一个。1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-register-bg-x: 0px; /* 注册页纸张背景图左右微调：正数向右，负数向左。 */
+  --auth-register-bg-y: 0px; /* 注册页纸张背景图上下微调：正数向下，负数向上。 */
+  --auth-register-bg-scale: 1; /* 注册页纸张背景图大小：一般不改，纸张素材不对齐时再改。 */
+  --auth-register-content-w: 77%; /* 第 2 页内容区宽度。变大=表单更宽。 */
+  --auth-register-content-x: 0px; /* 注册页内容区整体左右位置：正数向右，负数向左。 */
+  --auth-register-content-y: 0px; /* 注册页内容区整体上下位置：正数向下，负数向上。 */
+  --auth-register-content-scale: 1; /* 注册页内容区整体大小：只改这一个。1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-register-content-top: 44px; /* 第 2 页内容区顶部距离。变大=内容整体往下。 */
+  --auth-register-content-bottom: 58px; /* 第 2 页内容区底部留白。变大=底部更空。 */
+  --auth-child-upper-group-y: 20px; /* 小朋友注册页红框内容整体上下微调：正数整体向下，负数整体向上；不影响下面注册按钮。 */
+
+  --auth-register-tabs-w: 98%; /* 第 2 页顶部身份 tab 总宽度。变大=tab 更宽。 */
+  --auth-register-tabs-y: -34px; /* 第 2 页顶部身份 tab 上下位置。更负=更压住纸张上边缘。 */
+  --auth-register-tabs-x: 0px; /* 注册页顶部两个 tab 整体左右位置：正数向右，负数向左。 */
+  --auth-register-tabs-scale: 1; /* 注册页顶部两个 tab 整体大小：1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-register-tabs-gap: 8px; /* 两个 tab 之间的间距。变大=分开。 */
+  --auth-register-tab-h: 66px; /* tab 高度。变大=tab 更高。 */
+  --auth-register-tab-bg-size: 100% 100%; /* tab 素材显示大小。想保持原图比例可改成 contain。 */
+  --auth-register-child-tab-x: 0px; /* 小朋友 tab 单独左右位置：正数向右，负数向左。 */
+  --auth-register-child-tab-y: 120px; /* 小朋友 tab 单独上下位置：正数向下，负数向上。 */
+  --auth-register-child-tab-scale: 1; /* 小朋友 tab 单独大小：1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-register-parent-tab-x: 0px; /* 家长 tab 单独左右位置：正数向右，负数向左。 */
+  --auth-register-parent-tab-y: 120px; /* 家长 tab 单独上下位置：正数向下，负数向上。 */
+  --auth-register-parent-tab-scale: 1; /* 家长 tab 单独大小：1=原大小，0.9=缩小，1.1=放大。 */
+
+  --auth-register-back-x: 10px; /* 返回按钮左右位置。正数向右，负数向左。 */
+  --auth-register-back-y: 90px; /* 返回按钮上下位置。变大=往下。 */
+  --auth-register-back-w: 92px; /* 返回按钮宽度。变大=更宽。 */
+  --auth-register-back-h: 39px; /* 返回按钮高度。变大=更高。 */
+  --auth-register-back-scale: 1; /* 返回按钮整体大小：1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-register-back-bg-size: contain; /* 返回按钮素材大小。contain=不拉伸，100% 100%=铺满。 */
+  --auth-register-back-text-x: 10px; /* 返回按钮文字左右位置。正数向右，负数向左。 */
+  --auth-register-back-text-y: 0px; /* 返回按钮文字上下位置。正数向下，负数向上。 */
+
+  --auth-register-house-right: 10%; /* 家长注册页右上蓝房子离纸张右侧的位置。变大=往左，变小/负数=往右露出。 */
+  --auth-register-house-top: 28%; /* 家长注册页右上蓝房子离纸张顶部的位置。变大=往下，变小/负数=往上。 */
+  --auth-register-house-x: var(--auth-register-house-right); /* 兼容旧调参名：等同于 right。 */
+  --auth-register-house-y: var(--auth-register-house-top); /* 兼容旧调参名：等同于 top。 */
+  --auth-register-house-w: 40%; /* 家长注册页右上蓝房子大小。变大=更大。 */
+  --auth-register-house-max-w: 340px; /* 蓝房子最大宽度上限。变大=允许更大。 */
+  --auth-register-house-scale: 1; /* 家长注册页蓝房子整体大小：只改这一个。 */
+
+  --auth-register-title-min-h: 150px; /* 小朋友注册页标题区域高度。变大=标题区占更多空间。 */
+  --auth-child-title-w: 112%; /* “注册水獭文字+装饰”标题图宽度。变大=更大。 */
+  --auth-child-title-x: -7%; /* 小朋友标题图左右位置。正数向右，负数向左。 */
+  --auth-child-title-y: 60px; /* 小朋友标题图上下位置：正数向下，负数向上。 */
+  --auth-child-title-scale: 0.8; /* 小朋友标题图整体大小：1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-child-title-bottom-gap: -6px; /* 小朋友标题图和说明文字间距。变大=间距更大。 */
+  --auth-child-desc-x: 15%; /* 小朋友说明文字左侧缩进。变大=文字往右。 */
+  --auth-child-desc-y: 50px; /* 小朋友说明文字上下位置。变大=往下。 */
+  --auth-child-desc-scale: 1; /* 小朋友说明文字整体大小：1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-child-desc-pos-x: 0px; /* “给你的水獭取个名字...”说明文字左右微调。正数向右，负数向左。 */
+  --auth-child-desc-pos-y: 0px; /* “给你的水獭取个名字...”说明文字上下微调。正数向下，负数向上。 */
+  --auth-register-form-gap: 15px; /* 注册页表单元素之间的竖向间距。变大=元素分得更开。 */
+  --auth-register-template-form-h: 605px; /* 小朋友注册页已调好的表单视觉高度；家长页用它保持整张纸和 tab/返回按钮同屏对齐。 */
+  --auth-register-action-anchor-y: 419px; /* 小朋友注册页已调好的注册按钮视觉基线；家长页主按钮对齐这条线。 */
+  --auth-child-name-row-gap: 8px; /* 小朋友输入框和随机按钮之间的间距。变大=分开。 */
+  --auth-child-name-row-x: 0px; /* 小朋友输入框+随机按钮整体左右位置。 */
+  --auth-child-name-row-y: 0px; /* 小朋友输入框+随机按钮整体上下位置。 */
+  --auth-child-name-row-scale: 1; /* 小朋友输入框+随机按钮整体大小。 */
+  --auth-child-label-h: 18px; /* “水獭昵称”文字占位高度。用于让随机按钮和下方输入框水平居中对齐。 */
+  --auth-child-input-h: 76px; /* 小朋友用户名输入框高度。变大=输入框更高。 */
+  --auth-child-input-w: 100%; /* 小朋友用户名输入框宽度。 */
+  --auth-child-input-x: 0px; /* 小朋友用户名输入框单独左右位置：正数向右，负数向左。 */
+  --auth-child-input-y: 0px; /* 小朋友用户名输入框单独上下位置：正数向下，负数向上。 */
+  --auth-child-input-scale: 1; /* 小朋友用户名输入框单独大小：一般优先改整行 scale。 */
+  --auth-child-input-bg-size: 100% 100%; /* 小朋友输入框素材大小。100% 100%=单层铺满，避免透明画布重影。 */
+  --auth-child-input-pad-x: 20px; /* 小朋友输入框内部左右 padding。变大=文字更靠中间。 */
+  --auth-child-input-pad-top: 0px; /* 小朋友输入框内部上 padding。变大=文字往下。 */
+  --auth-child-input-pad-bottom: 0px; /* 小朋友输入框内部下 padding。变大=底部留白更多。 */
+  --auth-child-input-text-y: -4px; /* 输入框内文字/placeholder 上下位置。负数向上，正数向下。 */
+  --auth-random-button-w: 86px; /* 随机按钮宽度。变大=更宽。 */
+  --auth-random-button-h: 76px; /* 随机按钮高度。变大=更高。 */
+  --auth-random-button-x: 0px; /* 随机按钮左右微调：正数向右，负数向左。 */
+  --auth-random-button-y: -10px; /* 随机按钮上下微调：正数向下，负数向上。 */
+  --auth-random-button-align-y: 9px; /* 随机按钮对齐输入框中线。正数向下，负数向上。 */
+  --auth-random-button-scale: 1; /* 随机按钮整体大小：1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-random-button-bg-size: contain; /* 随机按钮素材大小。contain=不拉伸，100% 100%=铺满。 */
+  --auth-primary-button-h: 150px; /* 注册主按钮高度。变大=按钮更高。 */
+  --auth-primary-button-w: 108%; /* 注册按钮宽度。改这里，不会拉伸素材。 */
+  --auth-primary-button-x: 0px; /* 注册按钮左右位置：正数向右，负数向左。 */
+  --auth-primary-button-y: 0px; /* 注册按钮上下位置：正数向下，负数向上。 */
+  --auth-primary-button-scale: 1.12; /* 注册按钮整体大小：1=原大小，0.9=缩小，1.1=放大。 */
+  --auth-primary-button-bg-size: contain; /* 注册按钮素材大小。contain=完整显示，不裁剪。 */
+  --auth-primary-button-bg-x: center; /* 注册按钮素材左右位置：center 或 50%。 */
+  --auth-primary-button-bg-y: 46%; /* 注册按钮素材上下位置：数值变大=素材往下。 */
+  --auth-primary-button-text-x: 0px; /* 注册按钮文字左右位置。正数向右，负数向左。 */
+  --auth-primary-button-text-y: -10px; /* 注册按钮文字上下位置。正数向下，负数向上。 */
+  --auth-primary-button-text-scale: 1; /* 注册按钮文字大小。1=原大小，1.1=放大，0.9=缩小。 */
+
+  /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
+  /* !!! SEARCH HERE: PARENT INPUT TUNING                                   !!! */
+  /* !!! 家长页“显示名 + 邮箱”输入框，只改下面这一整块最方便              !!! */
+  /* !!! ART = 纯 UI 图片背板；REAL INPUT = 真正能输入文字的 HTML input      !!! */
+  /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
+  --auth-parent-title-w: 360px; /* 家长注册标题图宽度。变大=更大。 */
+  --auth-parent-title-gap: 8px; /* 家长标题图和说明之间间距。变大=更开。 */
+  --auth-parent-title-top: 44px; /* 家长标题区域顶部距离。变大=标题整体往下。 */
+  --auth-parent-title-x: -65px; /* 家长标题图左右位置：正数向右，负数向左。 */
+  --auth-parent-title-y: 70px; /* 家长标题图上下位置：正数向下，负数向上。 */
+  --auth-parent-title-scale: 0.7; /* 家长标题图整体大小。 */
+  --auth-parent-title-min-h: 154px; /* 家长标题区域高度。变大=标题区更高。 */
+  --auth-parent-register-tabs-y: 0px; /* 只调家长页顶部 tab 上下位置。正数向下，负数向上；不影响小朋友页。 */
+  --auth-parent-register-back-y: 0px; /* 只调家长页返回按钮上下位置。正数向下，负数向上；不影响小朋友页。 */
+  --auth-parent-primary-button-y: 0px; /* 只调家长页注册按钮上下位置。正数向下，负数向上；不影响小朋友页。 */
+  /* ========================================================================== */
+  /* PARENT INPUT TUNING - 家长页输入框，只改这里最方便 */
+  /* 家长页：显示名 + 邮箱输入框调参区 START */
+  /* 重点：这里分成两层。 */
+  /* 1. UI 素材层 = 那张输入框图片背板。 */
+  /* 2. 真实输入层 = 用户真正输入文字/placeholder 的 HTML input。 */
+  /* ========================================================================== */
+
+  /* [A] UI 素材层：只移动/缩放“parent-fields-inputs.webp”整张图。 */
+  --auth-parent-fields-art-x: -34px; /* UI 素材整体左右位置：正数向右，负数向左。 */
+  --auth-parent-fields-art-y: 0px; /* UI 素材整体上下位置：正数向下，负数向上。 */
+  --auth-parent-fields-art-scale: 1; /* UI 素材整体大小。 */
+  --auth-parent-fields-art-w: 100%; /* UI 素材盒子宽度。变大=更宽。 */
+  --auth-parent-fields-art-min-h: 210px; /* UI 素材盒子高度。变大=更高。 */
+  --auth-parent-fields-art-bg-size: contain; /* UI 素材显示方式。contain=不拉伸，100% 100%=铺满。 */
+
+  /* -------------------------------------------------------------------------- */
+  /* [B] 真实输入层：只移动真正能输入文字/placeholder 的 HTML input，不移动素材图。 */
+  --auth-parent-real-input-x: 30px; /* 真实输入文字整体左右位置：正数向右，负数向左。 */
+  --auth-parent-real-input-y: 12px; /* 真实输入文字整体上下位置：正数向下，负数向上。 */
+  --auth-parent-real-input-pad-x: 16px; /* 真实输入框内部左右 padding。 */
+  --auth-parent-real-input-pad-y: 0px; /* 真实输入框内部上下 padding。 */
+  --auth-parent-real-input-h: 56px; /* 真实输入框点击/输入高度。 */
+  --auth-parent-real-input-gap: 18px; /* 两个真实输入框之间距离。变大=更开。 */
+
+  /* -------------------------------------------------------------------------- */
+  /* [C] 兼容旧变量：下面这组不是优先调参入口，一般不要改。 */
+  --auth-parent-fields-gap: var(--auth-parent-real-input-gap); /* 兼容旧调参名：真实输入框间距。 */
+  --auth-parent-fields-w: var(--auth-parent-fields-art-w); /* 兼容旧调参名：UI 素材盒子宽度。 */
+  --auth-parent-fields-min-h: var(--auth-parent-fields-art-min-h); /* 兼容旧调参名：UI 素材盒子高度。 */
+  --auth-parent-fields-pad-x: 18px; /* UI 素材盒子内部左右 padding。通常别用它调真实输入位置，优先改 --auth-parent-real-input-*。 */
+  --auth-parent-fields-pad-top: 20px; /* UI 素材盒子内部上 padding。通常别用它调真实输入位置，优先改 --auth-parent-real-input-*。 */
+  --auth-parent-fields-pad-bottom: 18px; /* UI 素材盒子内部下 padding。 */
+  --auth-parent-fields-x: var(--auth-parent-fields-art-x); /* 兼容旧调参名：UI 素材整体左右位置。 */
+  --auth-parent-fields-y: var(--auth-parent-fields-art-y); /* 兼容旧调参名：UI 素材整体上下位置。 */
+  --auth-parent-fields-scale: var(--auth-parent-fields-art-scale); /* 兼容旧调参名：UI 素材整体大小。 */
+  --auth-parent-fields-bg-size: var(--auth-parent-fields-art-bg-size); /* 兼容旧调参名：UI 素材显示方式。 */
+  /* 家长页：显示名 + 邮箱输入框调参区 END */
+  /* ========================================================================== */
+
+  --auth-parent-login-button-x: 0px; /* 家长页“已有家长 ID 登录”按钮左右位置：正数向右，负数向左。 */
+  --auth-parent-login-button-y: 0px; /* 家长页“已有家长 ID 登录”按钮上下位置：正数向下，负数向上。 */
+  --auth-parent-login-button-scale: 1; /* 家长页“已有家长 ID 登录”按钮整体大小。 */
+
+  --auth-mobile-identity-width: min(96vw, 520px); /* 手机端第 1 页整体宽度。 */
+  --auth-mobile-identity-min-h: 720px; /* 手机端第 1 页最小高度。 */
+  --auth-mobile-header-y: -22%; /* 手机端顶部水獭装饰上下位置。更负=更往上。 */
+  --auth-mobile-content-w: 84%; /* 手机端第 1 页内容区宽度。 */
+  --auth-mobile-content-y: 22%; /* 手机端第 1 页内容整体上下位置。变大=往下。 */
+  --auth-mobile-title-size: 88%; /* 手机端欢迎标题图大小。想更大就调大，例如 96%；想更小就调小。 */
+  --auth-mobile-title-max-h: 118px; /* 手机端欢迎标题图最大高度。 */
+  --auth-mobile-card-gap: 14px; /* 手机端身份卡上下间距。 */
+  --auth-mobile-cards-y: 22px; /* 手机端两张身份卡整体上下位置。变大=往下。 */
+  --auth-mobile-login-entry-y: 18px; /* 手机端“已有 ID 登录”按钮上下位置。 */
+  --auth-mobile-register-width: min(96vw, 500px); /* 手机端注册页宽度。 */
+  --auth-mobile-register-min-h: 660px; /* 手机端注册页最小高度。 */
+  --auth-mobile-register-content-w: 78%; /* 手机端注册内容宽度。 */
+  --auth-mobile-register-content-top: 38px; /* 手机端注册内容顶部距离。 */
+  --auth-mobile-register-title-min-h: 124px; /* 手机端注册标题区域高度。 */
+  --auth-mobile-child-title-w: 116%; /* 手机端小朋友标题图宽度。 */
+  --auth-mobile-child-title-x: -8%; /* 手机端小朋友标题图左右位置。 */
+  --auth-mobile-child-input-h: 96px; /* 手机端小朋友输入框高度。 */
+  --auth-mobile-child-input-pad-x: 16px; /* 手机端小朋友输入框左右 padding。 */
+  --auth-mobile-child-input-pad-top: 10px; /* 手机端小朋友输入框上 padding。 */
+  --auth-mobile-child-input-pad-bottom: 8px; /* 手机端小朋友输入框下 padding。 */
+  --auth-mobile-parent-fields-pad-x: 14px; /* 手机端家长输入框组左右 padding。 */
+  --auth-mobile-parent-fields-pad-top: 18px; /* 手机端家长输入框组上 padding。 */
+  --auth-mobile-parent-fields-pad-bottom: 16px; /* 手机端家长输入框组下 padding。 */
+  --auth-mobile-house-x: -34%; /* 手机端家长蓝房子左右位置。更负=更往右。 */
+  --auth-mobile-house-y: 2%; /* 手机端家长蓝房子上下位置。 */
+  --auth-mobile-house-w: 76%; /* 手机端家长蓝房子大小。 */
+  --auth-mobile-back-x: -10px; /* 手机端返回按钮左右位置。 */
+  --auth-mobile-back-y: 82px; /* 手机端返回按钮上下位置。 */
+  --auth-mobile-random-button-h: 64px; /* 手机端随机按钮高度。 */
+
+  --auth-small-title-size: 92%; /* 超小屏欢迎标题图大小。 */
+  --auth-small-title-max-h: 112px; /* 超小屏欢迎标题图最大高度。 */
+  --auth-small-register-content-w: 80%; /* 超小屏注册内容宽度。 */
+  --auth-small-tab-gap: 7px; /* 超小屏 tab 间距。 */
+  --auth-small-tab-h: 54px; /* 超小屏 tab 高度。 */
+}
+
 .otter-auth-lock {
   overflow: hidden;
 }
@@ -10,233 +275,708 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
+  overflow: auto;
   background:
-    linear-gradient(180deg, rgba(42, 157, 213, .76), rgba(36, 122, 177, .82)),
+    linear-gradient(180deg, rgba(50, 169, 218, .72), rgba(34, 128, 184, .82)),
     url("/BG.webp?v=202606112151") center / cover no-repeat;
   font-family: Nunito, ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #21415c;
+  color: var(--auth-brown);
 }
 
 .otter-auth-panel {
-  width: min(920px, 100%);
-  display: grid;
-  grid-template-columns: minmax(260px, .9fr) minmax(320px, 1fr);
-  gap: 18px;
-  align-items: stretch;
-}
-
-.otter-auth-brand,
-.otter-auth-card {
-  background: rgba(255, 255, 255, .94);
-  border: 4px solid rgba(255, 255, 255, .75);
-  border-radius: 24px;
-  box-shadow: 0 24px 70px rgba(20, 75, 115, .26);
-}
-
-.otter-auth-brand {
-  padding: 26px;
+  width: min(96vw, var(--auth-panel-max-width));
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 430px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.96), rgba(235,248,255,.92)),
-    url("/otter-egg.webp?v=202606112151") right 18px bottom 18px / 132px auto no-repeat;
+  justify-content: center;
 }
 
-.otter-auth-logo {
-  width: 142px;
-  height: auto;
+.otter-auth-shell {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  color: var(--auth-brown);
 }
 
-.otter-auth-brand h2 {
-  margin: 24px 0 10px;
-  font-size: 34px;
-  line-height: 1.08;
-  letter-spacing: 0;
-  color: #14527b;
+.otter-auth-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
-.otter-auth-brand p {
-  margin: 0;
-  max-width: 280px;
-  font-size: 16px;
-  line-height: 1.55;
-  font-weight: 800;
-  color: #4b6c82;
+.otter-auth-shell--identity {
+  width: var(--auth-identity-width);
+  aspect-ratio: 1536 / 1024;
+  overflow: visible;
 }
 
-.otter-auth-badge {
-  align-self: flex-start;
-  margin-top: 24px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #fff3c4;
-  color: #8a5b00;
-  font-size: 13px;
-  font-weight: 900;
+.otter-auth-paper-bg,
+.otter-auth-header-decor,
+.otter-auth-register-bg,
+.otter-auth-house-decor {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
 }
 
-.otter-auth-card {
-  padding: 26px;
+.otter-auth-paper-bg {
+  left: 50%;
+  top: 50%;
+  width: var(--auth-identity-paper-w);
+  height: var(--auth-identity-paper-h);
+  object-fit: contain;
+  transform: translate(calc(-50% + var(--auth-identity-paper-x)), calc(-50% + var(--auth-identity-paper-y)));
 }
 
-.otter-auth-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 20px;
+.otter-auth-paper-bg {
+  z-index: -2;
 }
 
-.otter-auth-tab,
-.otter-auth-button,
-.otter-auth-link-button {
+.otter-auth-header-decor {
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: var(--auth-identity-header-w);
+  height: var(--auth-identity-header-h);
+  object-fit: contain;
+  object-position: top center;
+  transform: translate(calc(-50% + var(--auth-identity-header-x)), calc(-50% + var(--auth-identity-header-y)));
+}
+
+.otter-auth-identity-content {
+  position: relative;
+  z-index: 2;
+  width: var(--auth-identity-content-w);
+  margin: 0 auto;
+  padding-top: var(--auth-identity-content-y);
+}
+
+.otter-auth-title-art {
+  position: relative;
+  z-index: 3;
+  display: block;
+  width: min(100%, var(--auth-identity-title-size));
+  max-height: var(--auth-identity-title-max-h);
+  object-fit: contain;
+  margin: 0 auto;
+  transform: translate(var(--auth-identity-title-x), var(--auth-identity-title-y));
+}
+
+.otter-auth-role-grid {
+  display: flex;
+  justify-content: center;
+  gap: var(--auth-identity-card-gap);
+  width: var(--auth-identity-cards-w);
+  margin: var(--auth-identity-cards-y) auto 0;
+  transform: translateX(var(--auth-identity-cards-x)) scale(var(--auth-identity-cards-scale));
+  transform-origin: top center;
+}
+
+.otter-auth-role-card {
+  position: relative;
+  display: block;
+  flex: 0 0 var(--auth-identity-card-w);
+  min-width: 0;
+  aspect-ratio: 620 / 364;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transform: translateY(0);
+  transition: transform .16s ease, filter .16s ease;
+}
+
+.otter-auth-role-card:hover,
+.otter-auth-role-card:focus-visible {
+  transform: translateY(-4px);
+  filter: saturate(1.05);
+  outline: none;
+}
+
+.otter-auth-role-card:focus-visible {
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, .85);
+  border-radius: 26px;
+}
+
+.otter-auth-role-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.otter-auth-role-figure {
+  position: absolute;
+  z-index: 2;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.otter-auth-role-figure--child {
+  left: var(--auth-child-card-otter-x);
+  bottom: var(--auth-child-card-otter-bottom);
+  width: var(--auth-child-card-otter-w);
+}
+
+.otter-auth-role-figure--guardian {
+  right: var(--auth-parent-card-house-right);
+  bottom: var(--auth-parent-card-house-bottom);
+  width: var(--auth-parent-card-house-w);
+}
+
+.otter-auth-role-text {
+  position: absolute;
+  z-index: 3;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.otter-auth-role-text--child {
+  left: var(--auth-child-card-text-x);
+  top: var(--auth-child-card-text-y);
+  width: var(--auth-child-card-text-w);
+  height: var(--auth-child-card-text-h);
+  transform: scale(var(--auth-child-card-text-scale));
+  transform-origin: left top;
+}
+
+.otter-auth-role-text--guardian {
+  left: var(--auth-parent-card-text-x);
+  top: var(--auth-parent-card-text-y);
+  width: var(--auth-parent-card-text-w);
+  height: var(--auth-parent-card-text-h);
+  transform: scale(var(--auth-parent-card-text-scale));
+  transform-origin: left top;
+}
+
+.otter-auth-role-arrow {
+  position: absolute;
+  z-index: 4;
+  right: var(--auth-child-card-arrow-right);
+  bottom: var(--auth-child-card-arrow-bottom);
+  width: var(--auth-child-card-arrow-w);
+  transform: translateY(var(--auth-child-card-arrow-y)) scale(var(--auth-child-card-arrow-scale));
+  transform-origin: center center;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.otter-auth-role-card--guardian .otter-auth-role-arrow {
+  left: var(--auth-parent-card-arrow-left);
+  right: auto;
+  width: var(--auth-parent-card-arrow-w);
+  transform: translateY(var(--auth-parent-card-arrow-y)) scale(var(--auth-parent-card-arrow-scale));
+}
+
+.otter-auth-login-entry,
+.otter-auth-text-button,
+.otter-auth-skip-button,
+.otter-auth-back-button,
+.otter-auth-primary-button,
+.otter-auth-random-button,
+.otter-auth-role-tab {
   border: 0;
   font: inherit;
   cursor: pointer;
 }
 
-.otter-auth-tab {
-  min-height: 58px;
-  border-radius: 18px;
-  background: #e8f5fc;
-  color: #28617f;
+.otter-auth-login-entry {
+  display: block;
+  min-height: var(--auth-login-entry-h);
+  margin: var(--auth-login-entry-y) auto 0;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: rgba(255, 248, 225, .92);
+  color: var(--auth-brown);
+  font-size: 15px;
   font-weight: 1000;
-  font-size: 17px;
+  box-shadow: inset 0 0 0 2px rgba(218, 175, 100, .65);
 }
 
-.otter-auth-tab.active {
-  background: #ff9800;
-  color: #fff;
-  box-shadow: 0 7px 0 #c96c00;
+.otter-auth-shell--register,
+.otter-auth-shell--login {
+  width: var(--auth-register-width);
+  min-height: var(--auth-register-min-h);
+  transform: translate(var(--auth-register-x), var(--auth-register-y)) scale(var(--auth-register-scale));
+  transform-origin: center center;
+}
+
+.otter-auth-register-bg {
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: translate(var(--auth-register-bg-x), var(--auth-register-bg-y)) scale(var(--auth-register-bg-scale));
+  transform-origin: center center;
+}
+
+.otter-auth-house-decor {
+  z-index: -1;
+  top: var(--auth-register-house-top);
+  right: var(--auth-register-house-right);
+  width: var(--auth-register-house-w);
+  max-width: var(--auth-register-house-max-w);
+  opacity: .98;
+  object-fit: contain;
+  transform: scale(var(--auth-register-house-scale));
+  transform-origin: center center;
+}
+
+.otter-auth-register-content {
+  position: relative;
+  z-index: 2;
+  width: var(--auth-register-content-w);
+  margin: 0 auto;
+  padding: var(--auth-register-content-top) 0 var(--auth-register-content-bottom);
+  transform: translate(var(--auth-register-content-x), var(--auth-register-content-y)) scale(var(--auth-register-content-scale));
+  transform-origin: top center;
+}
+
+.otter-auth-role-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--auth-register-tabs-gap);
+  width: var(--auth-register-tabs-w);
+  margin: var(--auth-register-tabs-y) auto 28px;
+  transform: translateX(var(--auth-register-tabs-x)) scale(var(--auth-register-tabs-scale));
+  transform-origin: top center;
+  z-index: 4;
+}
+
+.otter-auth-role-tab {
+  min-height: var(--auth-register-tab-h);
+  border-radius: 24px;
+  padding: 0 14px;
+  color: var(--auth-blue-text);
+  background: transparent center / var(--auth-register-tab-bg-size) no-repeat;
+  font-size: 17px;
+  font-weight: 1000;
+  filter: saturate(.96);
+  transform-origin: center center;
+}
+
+.otter-auth-role-tab--child {
+  background-image: url("/page0/0-2/tab-child-bg.webp");
+  transform: translate(var(--auth-register-child-tab-x), var(--auth-register-child-tab-y)) scale(var(--auth-register-child-tab-scale));
+}
+
+.otter-auth-role-tab--child.active {
+  background-image: url("/page0/0-2/tab-child-bg-2.webp");
+}
+
+.otter-auth-role-tab--guardian {
+  background-image: url("/page0/0-2/tab-parent-bg-2.webp");
+  transform: translate(var(--auth-register-parent-tab-x), var(--auth-register-parent-tab-y)) scale(var(--auth-register-parent-tab-scale));
+}
+
+.otter-auth-role-tab--guardian.active {
+  background-image: url("/page0/0-2/tab-parent-bg.webp");
+}
+
+.otter-auth-role-tab.active {
+  color: #fffaf0;
+  filter: saturate(1.08);
+}
+
+.otter-auth-back-button {
+  position: absolute;
+  left: var(--auth-register-back-x);
+  top: var(--auth-register-back-y);
+  z-index: 5;
+  width: var(--auth-register-back-w);
+  min-height: var(--auth-register-back-h);
+  padding: 0 0 0 calc(24px + var(--auth-register-back-text-x));
+  border-radius: 20px;
+  color: var(--auth-brown);
+  background: transparent url("/page0/0-2/register-back-button.webp") center / var(--auth-register-back-bg-size) no-repeat;
+  font-size: 13px;
+  font-weight: 1000;
+  text-align: left;
+  line-height: var(--auth-register-back-h);
+  transform: translateY(var(--auth-register-back-text-y)) scale(var(--auth-register-back-scale));
+  transform-origin: center center;
+}
+
+.otter-auth-shell--register .otter-auth-role-tabs {
+  margin-top: calc(var(--auth-register-tabs-y) + var(--auth-child-upper-group-y));
+}
+
+.otter-auth-shell--register .otter-auth-back-button {
+  top: calc(var(--auth-register-back-y) + var(--auth-child-upper-group-y));
+}
+
+.otter-auth-shell[data-panel="register-guardian"] .otter-auth-role-tabs {
+  margin-top: calc(var(--auth-register-tabs-y) + var(--auth-child-upper-group-y) + var(--auth-parent-register-tabs-y));
+}
+
+.otter-auth-shell[data-panel="register-guardian"] .otter-auth-back-button {
+  top: calc(var(--auth-register-back-y) + var(--auth-child-upper-group-y) + var(--auth-parent-register-back-y));
 }
 
 .otter-auth-form {
-  display: none;
-}
-
-.otter-auth-form.active {
-  display: block;
+  display: grid;
+  gap: var(--auth-register-form-gap);
 }
 
 .otter-auth-title {
-  margin: 0 0 6px;
-  font-size: 26px;
-  line-height: 1.15;
-  color: #153f61;
+  margin: 0;
+  color: var(--auth-brown);
+  font-size: 34px;
+  line-height: 1.08;
+  font-weight: 1000;
+  letter-spacing: 0;
+}
+
+.otter-auth-register-title-row--guardian .otter-auth-title {
+  color: var(--auth-brown);
 }
 
 .otter-auth-copy {
-  margin: 0 0 18px;
-  color: #5a7488;
-  line-height: 1.5;
-  font-weight: 750;
+  margin: 8px 0 0;
+  color: var(--auth-brown-soft);
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 850;
+}
+
+.otter-auth-register-title-row {
+  position: relative;
+  min-height: var(--auth-register-title-min-h);
+  display: grid;
+  align-content: center;
+  padding-top: 0;
+}
+
+.otter-auth-child-title-art {
+  display: block;
+  width: var(--auth-child-title-w);
+  max-width: none;
+  height: auto;
+  margin-left: var(--auth-child-title-x);
+  transform: translateY(calc(var(--auth-child-title-y) + var(--auth-child-upper-group-y))) scale(var(--auth-child-title-scale));
+  transform-origin: center center;
+  margin-bottom: var(--auth-child-title-bottom-gap);
+  pointer-events: none;
+}
+
+.otter-auth-register-title-row--child .otter-auth-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.otter-auth-register-title-row--child .otter-auth-copy {
+  margin-top: calc(var(--auth-child-desc-y) + var(--auth-child-upper-group-y));
+  padding-left: var(--auth-child-desc-x);
+  color: var(--auth-brown-soft);
+  transform: translate(var(--auth-child-desc-pos-x), var(--auth-child-desc-pos-y)) scale(var(--auth-child-desc-scale));
+  transform-origin: left top;
+}
+
+.otter-auth-register-title-row--guardian {
+  display: block;
+  padding-top: var(--auth-parent-title-top);
+  min-height: var(--auth-parent-title-min-h);
+}
+
+.otter-auth-shell[data-panel="register-guardian"] .otter-auth-form {
+  position: relative;
+  display: block;
+  min-height: var(--auth-register-template-form-h);
+}
+
+.otter-auth-shell[data-panel="register-guardian"] .otter-auth-register-title-row--guardian {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.otter-auth-parent-title-art {
+  display: block;
+  width: var(--auth-parent-title-w);
+  height: auto;
+  margin: 0 auto var(--auth-parent-title-gap);
+  transform: translate(var(--auth-parent-title-x), var(--auth-parent-title-y)) scale(var(--auth-parent-title-scale));
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+.otter-auth-register-title-row--guardian .otter-auth-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.otter-auth-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.otter-auth-row--child-name {
+  align-items: start;
+  gap: var(--auth-child-name-row-gap);
+  transform: translate(var(--auth-child-name-row-x), calc(var(--auth-child-name-row-y) + var(--auth-child-upper-group-y))) scale(var(--auth-child-name-row-scale));
+  transform-origin: center center;
 }
 
 .otter-auth-field {
   display: grid;
-  gap: 8px;
-  margin: 14px 0;
+  gap: 7px;
+}
+
+.otter-auth-field--child-name {
+  gap: 2px;
+}
+
+.otter-auth-child-input-art {
+  display: grid;
+  align-items: center;
+  min-height: var(--auth-child-input-h);
+  width: var(--auth-child-input-w);
+  transform: translate(var(--auth-child-input-x), var(--auth-child-input-y)) scale(var(--auth-child-input-scale));
+  transform-origin: center center;
+  padding: var(--auth-child-input-pad-top) var(--auth-child-input-pad-x) var(--auth-child-input-pad-bottom);
+  background: transparent url("/page0/0-2/child-username-input.webp") center / var(--auth-child-input-bg-size) no-repeat;
+}
+
+.otter-auth-parent-fields-art {
+  display: grid;
+  width: var(--auth-parent-fields-art-w);
+  min-height: var(--auth-parent-fields-art-min-h);
+  gap: var(--auth-parent-real-input-gap);
+  padding: var(--auth-parent-fields-pad-top) var(--auth-parent-fields-pad-x) var(--auth-parent-fields-pad-bottom);
+  transform: translate(var(--auth-parent-fields-art-x), var(--auth-parent-fields-art-y)) scale(var(--auth-parent-fields-art-scale));
+  transform-origin: center center;
+  background: transparent url("/page0/0-2/parent-fields-inputs.webp") center / var(--auth-parent-fields-art-bg-size) no-repeat;
+}
+
+.otter-auth-shell[data-panel="register-guardian"] .otter-auth-parent-fields-art {
+  position: absolute;
+  top: calc(var(--auth-register-action-anchor-y) - var(--auth-register-form-gap) - var(--auth-parent-fields-art-min-h));
+  left: 50%;
+  transform: translate(calc(-50% + var(--auth-parent-fields-art-x)), var(--auth-parent-fields-art-y)) scale(var(--auth-parent-fields-art-scale));
+}
+
+.otter-auth-parent-fields-art .otter-auth-field label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .otter-auth-field label {
+  color: var(--auth-brown);
   font-size: 14px;
   font-weight: 1000;
-  color: #315f7a;
+  min-height: var(--auth-child-label-h);
+  line-height: var(--auth-child-label-h);
 }
 
 .otter-auth-field input {
   width: 100%;
   box-sizing: border-box;
-  min-height: 54px;
-  border-radius: 16px;
-  border: 3px solid #c8e7f6;
-  padding: 0 15px;
-  color: #183d57;
-  background: #fbfdff;
+  min-height: 56px;
+  border: 0;
+  border-radius: 14px;
+  padding: 0 16px;
+  color: #4d351f;
+  background: transparent;
   font-size: 17px;
-  font-weight: 850;
+  font-weight: 900;
   outline: none;
+  box-shadow: none;
+}
+
+.otter-auth-parent-real-input {
+  min-height: var(--auth-parent-real-input-h);
+  padding: var(--auth-parent-real-input-pad-y) var(--auth-parent-real-input-pad-x);
+  transform: translate(var(--auth-parent-real-input-x), var(--auth-parent-real-input-y));
+}
+
+.otter-auth-field--child-name input {
+  transform: translateY(var(--auth-child-input-text-y));
 }
 
 .otter-auth-field input:focus {
-  border-color: #ffad2f;
-  box-shadow: 0 0 0 4px rgba(255, 173, 47, .2);
+  box-shadow: none;
 }
 
-.otter-auth-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.otter-auth-row .otter-auth-field {
-  flex: 1;
-}
-
-.otter-auth-link-button {
-  margin-top: 23px;
-  min-height: 54px;
-  border-radius: 16px;
-  padding: 0 14px;
-  background: #e8f5fc;
-  color: #21617f;
+.otter-auth-random-button {
+  width: var(--auth-random-button-w);
+  min-width: var(--auth-random-button-w);
+  height: var(--auth-random-button-h);
+  min-height: var(--auth-random-button-h);
+  margin-top: var(--auth-child-label-h);
+  transform: translate(var(--auth-random-button-x), calc(var(--auth-random-button-y) + var(--auth-random-button-align-y))) scale(var(--auth-random-button-scale));
+  transform-origin: center center;
+  border-radius: 20px;
+  color: var(--auth-blue-text);
+  background: transparent url("/page0/0-2/random-button.webp") center / var(--auth-random-button-bg-size) no-repeat;
+  font-size: 0;
   font-weight: 1000;
+  box-shadow: none;
+  overflow: hidden;
+  user-select: none;
 }
 
-.otter-auth-form > .otter-auth-link-button {
-  width: 100%;
-  margin-top: 12px;
-}
-
-.otter-auth-button {
-  width: 100%;
-  min-height: 58px;
-  margin-top: 12px;
-  border-radius: 18px;
-  background: #ff9800;
-  color: #fff;
-  font-size: 18px;
+.otter-auth-primary-button {
+  display: grid;
+  place-items: center;
+  height: var(--auth-primary-button-h);
+  min-height: var(--auth-primary-button-h);
+  width: var(--auth-primary-button-w);
+  justify-self: center;
+  transform: translate(var(--auth-primary-button-x), var(--auth-primary-button-y)) scale(var(--auth-primary-button-scale));
+  transform-origin: center center;
+  border-radius: 22px;
+  padding: 0 18px;
+  color: #fffaf0;
+  background: transparent url("/page0/0-2/register-submit-button.webp") var(--auth-primary-button-bg-x) var(--auth-primary-button-bg-y) / var(--auth-primary-button-bg-size) no-repeat;
+  font-size: 22px;
   font-weight: 1000;
-  box-shadow: 0 8px 0 #c96c00;
+  box-shadow: none;
 }
 
-.otter-auth-button:disabled,
-.otter-auth-link-button:disabled {
-  opacity: .62;
+.otter-auth-primary-button-text {
+  display: inline-block;
+  transform: translate(var(--auth-primary-button-text-x), var(--auth-primary-button-text-y)) scale(var(--auth-primary-button-text-scale));
+  transform-origin: center center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.otter-auth-shell[data-panel="register-guardian"] .otter-auth-primary-button {
+  position: absolute;
+  top: var(--auth-register-action-anchor-y);
+  left: 50%;
+  transform: translate(calc(-50% + var(--auth-primary-button-x)), calc(var(--auth-primary-button-y) + var(--auth-parent-primary-button-y))) scale(var(--auth-primary-button-scale));
+}
+
+.otter-auth-primary-button:disabled,
+.otter-auth-random-button:disabled,
+.otter-auth-text-button:disabled {
+  opacity: .64;
   cursor: wait;
 }
 
-.otter-auth-note {
-  margin-top: 14px;
-  min-height: 22px;
-  color: #637a8b;
+.otter-auth-text-button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--auth-blue-text);
+  background: rgba(223, 244, 255, .72);
+  font-size: 14px;
+  font-weight: 1000;
+  transform: translate(var(--auth-parent-login-button-x), var(--auth-parent-login-button-y)) scale(var(--auth-parent-login-button-scale));
+  transform-origin: center center;
+}
+
+.otter-auth-skip-button {
+  display: block;
+  min-height: 34px;
+  margin: 8px auto 0;
+  padding: 0 16px;
+  border-radius: 999px;
+  color: #5d8ba3;
+  background: rgba(255, 255, 255, .68);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 900;
+}
+
+.otter-auth-shell[data-panel="register-guardian"] .otter-auth-text-button {
+  position: absolute;
+  top: calc(var(--auth-register-action-anchor-y) + var(--auth-primary-button-h) + 4px);
+  left: 50%;
+  transform: translate(calc(-50% + var(--auth-parent-login-button-x)), var(--auth-parent-login-button-y)) scale(var(--auth-parent-login-button-scale));
+}
+
+.otter-auth-shell[data-panel="register-guardian"] .otter-auth-skip-button {
+  position: absolute;
+  top: calc(var(--auth-register-action-anchor-y) + var(--auth-primary-button-h) + 46px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.otter-auth-shell[data-panel="register-guardian"] .otter-auth-note {
+  position: absolute;
+  top: calc(var(--auth-register-action-anchor-y) + var(--auth-primary-button-h) + 84px);
+  left: 0;
+  right: 0;
+}
+
+.otter-auth-shell[data-panel="register-guardian"] .otter-auth-id {
+  position: absolute;
+  top: calc(var(--auth-register-action-anchor-y) + var(--auth-primary-button-h) + 110px);
+  left: 0;
+  right: 0;
+}
+
+.otter-auth-note {
+  min-height: 20px;
+  color: var(--auth-brown-soft);
+  font-size: 13px;
+  font-weight: 900;
   line-height: 1.45;
 }
 
 .otter-auth-note.error {
-  color: #b42318;
+  color: var(--auth-danger);
 }
 
 .otter-auth-note.success {
-  color: #137a3a;
+  color: var(--auth-success);
 }
 
 .otter-auth-id {
   display: none;
-  margin-top: 14px;
   padding: 13px 14px;
   border-radius: 16px;
+  color: #2f6a25;
   background: #f4fbef;
   border: 2px solid #ccecbc;
+  font-size: 16px;
   font-weight: 1000;
-  color: #2f6a25;
 }
 
 .otter-auth-id.show {
   display: block;
+}
+
+.otter-auth-created {
+  display: grid;
+  gap: 16px;
+  padding-top: 180px;
+  text-align: center;
+}
+
+.otter-auth-shell--login .otter-auth-register-content {
+  padding-top: 132px;
+}
+
+.otter-auth-shell--login .otter-auth-title {
+  text-align: center;
+}
+
+.otter-auth-shell--login .otter-auth-copy {
+  text-align: center;
 }
 
 .otter-account-switcher {
@@ -277,7 +1017,7 @@
   border: 0;
   border-radius: 999px;
   padding: 7px 10px;
-  background: #ff9800;
+  background: var(--auth-orange);
   color: #fff;
   font: inherit;
   font-size: 12px;
@@ -287,28 +1027,12 @@
 
 @media (max-width: 760px) {
   .otter-auth-overlay {
-    padding: 14px;
     align-items: flex-start;
-    overflow: auto;
+    padding: 12px;
   }
 
   .otter-auth-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .otter-auth-brand {
-    min-height: auto;
-    padding: 20px;
-    background: rgba(255, 255, 255, .95);
-  }
-
-  .otter-auth-brand h2 {
-    margin-top: 18px;
-    font-size: 28px;
-  }
-
-  .otter-auth-card {
-    padding: 20px;
+    width: 100%;
   }
 
   .otter-account-switcher {
@@ -322,3 +1046,5 @@
     display: none;
   }
 }
+
+@media (max-width: 390px) {}

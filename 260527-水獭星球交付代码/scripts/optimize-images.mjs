@@ -6,7 +6,7 @@ import { readdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 
 const ROOT = path.resolve(process.cwd(), 'public');
-const DIRS = ['final-picture', 'section-visual-novel-material', 'npc-2d', 'star-progress-bar'];
+const DIRS = ['final-picture', 'section-visual-novel-material', 'npc-2d', 'star-progress-bar', 'page0'];
 const EXTS = new Set(['.png', '.jpg', '.jpeg']);
 
 const args = process.argv.slice(2);

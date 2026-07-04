@@ -4,6 +4,7 @@
 // 想手动微调画质（灯光/天空/材质色/花草密度）或布局（出生点/地形对齐）都改这里。
 
 import type { Vec2 } from '../parkourConstants';
+import { publicAssetUrl } from '../../lib/publicAssetUrl';
 
 // ── 灯光 ─────────────────────────────────────────────────────────
 export const LIGHTING = {
@@ -88,9 +89,9 @@ export const SCATTER_TINT = {
 
 // 地面花草 GLB（Tripo 扫描原模型 ~56MB/998K顶点，已 gltf-transform optimize 到 ~85KB/1~2K顶点、贴图256、无Draco）。
 // 用 InstancedMesh 散布做地面细节：真实花朵几何，比纯色小球更接近参考图的丰富感。
-export const FLOWER_DAISY_URL = '/3d-flower/optimized/daisy.glb';
-export const FLOWER_YELLOW_URL = '/3d-flower/optimized/yellow-flower.glb';
-export const PLANT_GREEN_URL = '/3d-flower/optimized/green-plant.glb';
+export const FLOWER_DAISY_URL = publicAssetUrl('/3d-flower/optimized/daisy.glb');
+export const FLOWER_YELLOW_URL = publicAssetUrl('/3d-flower/optimized/yellow-flower.glb');
+export const PLANT_GREEN_URL = publicAssetUrl('/3d-flower/optimized/green-plant.glb');
 
 // ── 地面细节散布 — 大量小物件让地面"活起来"（小花/草丛），程序生成、InstancedMesh ──
 // 参考图的丰富感来自「很多小东西」而非「几个大东西」。每类一个 InstancedMesh = 1 draw call。
@@ -113,22 +114,22 @@ export const FLOWER_GLB = {
   plant:  { url: PLANT_GREEN_URL,   count: 80, scale: [0.50, 0.80] as [number, number] },
 };
 
-export const TERRAIN_URL = '/model-site/scene-terrain-opt.glb?v=20260624-terrain';
+export const TERRAIN_URL = publicAssetUrl('/model-site/scene-terrain-opt.glb');
 // 程序化散布的额外树林模型（让场景从「公园」变「森林」）：圆树 + 灌木。
 // optimized/ 版：原模型每棵 22~27 万顶点 + 4 张 2K 贴图(89MB显存/个) → 95 棵严重卡。
 // 已 weld+simplify 减面到 ~4~5 万顶点，贴图 resize 512+webp(显存 89MB→5.6MB/个)。?v=2 强制刷新缓存。
-export const TREE_ROUND_URL = '/3d-tree/optimized/tree1-round.glb?v=3';
-export const BUSH_URL = '/3d-tree/optimized/bush.glb?v=3';
+export const TREE_ROUND_URL = publicAssetUrl('/3d-tree/optimized/tree1-round.glb');
+export const BUSH_URL = publicAssetUrl('/3d-tree/optimized/bush.glb');
 // idle.glb 单文件自包含：同一网格同一骨骼，内含 4 条动画。
 // 用它的 #1=站立、#2=跑步，clip 与网格同源，绑定天然成立（避免跨文件绑定导致的 T-pose）。
-export const CHARACTER_URL = '/main-character-other-position/idle.glb?v=20260701-meshopt';
+export const CHARACTER_URL = publicAssetUrl('/main-character-other-position/idle.glb');
 export const IDLE_CLIP_INDEX = 1; // 站立待机（≈4.27s，几乎不动）
 export const RUN_CLIP_INDEX = 2;  // 跑步（≈0.67s，腿大幅摆动）
 // 注：另有 #0≈走路、#3≈跳跃，备用。run-3/run.glb 已不再需要加载。
 
 // 月亮模型
-export const FAKE_MOON_URL = '/3d-moon/fake-moon.glb';
-export const REAL_MOON_URL = '/3d-moon/real-moon.glb';
+export const FAKE_MOON_URL = publicAssetUrl('/3d-moon/fake-moon.glb');
+export const REAL_MOON_URL = publicAssetUrl('/3d-moon/real-moon.glb');
 
 export const HEIGHT_SPLIT_Y = 1.2; // 世界 Y 质心阈值（castShadow 判断用）
 

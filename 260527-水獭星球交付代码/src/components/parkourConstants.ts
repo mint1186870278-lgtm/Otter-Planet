@@ -8,10 +8,13 @@
 //    进度条/HUD 抖动、要硬刷新。抽到这个纯 TS 文件后，ParkourScene 只剩组件导出，
 //    热更就干净了。改星星位置 / 缩放旋钮等仍在这里调，和以前一样。
 
+import { publicAssetUrl } from '../lib/publicAssetUrl';
+
 export const SHOW_COORDS = false;
 
+
 // 障碍物 glb 资源根目录（石头/木桶/箱子）。放这里供 ParkourScene 与拆分出的 Obstacles 子系统共用。
-export const PK = '/parkour-3d/kenney_platformer-kit/Models/GLB-format';
+export const PK = publicAssetUrl('/parkour-3d/kenney_platformer-kit/Models/GLB-format');
 
 // ── 演员层总缩放 ────────────────────────────────────────────────────────────
 // 「森林显得大」本质是「熊 ÷ 树」比例问题：不动地形（动它会让石板路变形、星星/NPC
@@ -100,9 +103,9 @@ export const TERRAIN_SIZE = 240;
 
 // ── NPC 配置（模型 / 缩放 / 朝向 / 世界坐标）─────────────────────────────────
 export const NPC_URLS = [
-  '/npc-model/woodpecker.glb',
-  '/npc-model/kiwi.glb',
-  '/npc-model/jiligulu.glb',
+  publicAssetUrl('/npc-model/woodpecker.glb'),
+  publicAssetUrl('/npc-model/kiwi.glb'),
+  publicAssetUrl('/npc-model/jiligulu.glb'),
 ] as const;
 export const NPC_SCALES = [2.5, 1.0, 1.0] as const;
 export const NPC_ROTATIONS = [Math.PI, 0, 0] as const;

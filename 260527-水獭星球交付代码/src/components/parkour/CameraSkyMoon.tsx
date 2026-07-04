@@ -12,7 +12,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { ACTOR_SCALE, NPC_POSITIONS, type Vec2, type NpcPos, type DebugInfo, type SkyPhase } from '../parkourConstants';
 import { LIGHTING, SKY, PLAYER_START, FAKE_MOON_URL, REAL_MOON_URL } from './config';
-import { occluderRef, playerYRef } from './runtime';
+import { cameraOccluderRef, playerYRef } from './runtime';
 
 // ── debug tracker — 报玩家坐标 + 到各 NPC 距离 ───────────────────────────────
 export function DebugTracker({ playerPosRef, onDebugUpdate, npcPositions }: {
@@ -81,7 +81,7 @@ export function CameraRig({ playerPosRef, camYawRef, cinematic = false }: {
 
     // 2) 遮挡处理（仅日常跟随）
     vGoal.current.copy(vDesired.current);
-    const occ = occluderRef.current;
+    const occ = cameraOccluderRef.current;
     if (!cinematic && occ) {
       vDir.current.copy(vDesired.current).sub(vOrigin.current);
       const fullDist = vDir.current.length();
