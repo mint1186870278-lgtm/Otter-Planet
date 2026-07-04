@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLang } from '../App';
-import { motion, AnimatePresence } from 'motion/react';
+import { useLang } from '../lib/lang';
+import { motion, AnimatePresence, useInView } from 'motion/react';
 import { Play, Pause, ArrowLeft, Loader2, RotateCcw } from 'lucide-react';
 import { useGallery, SLOT_ORDER, type GallerySlotKey } from '../lib/GalleryContext';
 
@@ -27,9 +27,12 @@ const SLOT_META: Record<GallerySlotKey, { zh: { title: string; desc: string }; e
 const BG_LQIP = 'data:image/webp;base64,UklGRqAAAABXRUJQVlA4IJQAAABQBACdASoUAA0APu1krU2ppaSiMAgBMB2JbACdMoGvqgvBE67InkjpIV4AAP5P3zucf4gUs5RJuhUOvnGdjfYWJ02hSDKmwb+8evf739pd2d580XW9gRsnIBh33upt62zY8f9uSApfXfcXOl1oBWtN/ZyM1j1IUARnG8K8IS5SotoE5vgwZDKf3oYl+EwQBZLz8AAA';
 const BG_URL = '/Result/BG-6d82a799.webp';
 
-export default function SectionResult({ onSave }: { onSave?: () => void } = {}) {
+export default function SectionResult({ isActive, onSave }: { isActive?: boolean; onSave?: () => void } = {}) {
   const { lang } = useLang();
   const { gallery, generateSlot } = useGallery();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measuredInView = useInView(containerRef, { amount: 0.5 });
+  const isInView = isActive ?? measuredInView;
   const [selectedKey, setSelectedKey] = useState<GallerySlotKey>('npc1');
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -43,22 +46,24 @@ export default function SectionResult({ onSave }: { onSave?: () => void } = {}) 
     bgImgRef.current = img;
   }, []);
 
+  useEffect(() => {
+    if (!isInView && isPlaying) setIsPlaying(false);
+  }, [isInView, isPlaying]);
+
   // TODO: Connect to real audio source — wire <audio> element ref and sync progress/isPlaying with actual playback events
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setProgress(p => {
-          if (p >= 100) {
-            setIsPlaying(false);
-            return 100;
-          }
-          return p + 0.5;
-        });
-      }, 50);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying]);
+    if (!isPlaying || !isInView) return;
+    const interval = window.setInterval(() => {
+      setProgress(p => {
+        if (p >= 100) {
+          setIsPlaying(false);
+          return 100;
+        }
+        return p + 0.5;
+      });
+    }, 50);
+    return () => window.clearInterval(interval);
+  }, [isPlaying, isInView]);
 
   const t = {
     zh: { complete: '冒险完成！', home: '回到主页', save: '珍藏\n回忆', loading: '正在画…', failed: '生成失败', retry: '重新生成', waiting: '还没画哦' },
@@ -71,7 +76,7 @@ export default function SectionResult({ onSave }: { onSave?: () => void } = {}) 
   const selectedMeta = SLOT_META[selectedKey][lang];
 
   return (
-    <div className="w-full h-full relative overflow-hidden flex flex-col items-center justify-center">
+    <div ref={containerRef} className="w-full h-full relative overflow-hidden flex flex-col items-center justify-center">
       {/* 渐进背景：LQIP blur → 全尺寸 WebP 淡入 */}
       <div
         className="absolute inset-0 bg-cover bg-center"
@@ -140,6 +145,7 @@ export default function SectionResult({ onSave }: { onSave?: () => void } = {}) 
 
         {/* Bottom Right Save Button (on book) — 跳转水獭蛋留存页 */}
         <button
+          data-otter-save-memory
           onClick={() => onSave?.()}
           className="absolute -right-2 bottom-0 md:-right-4 md:bottom-4 z-30 w-24 h-24 md:w-32 md:h-32 bg-[#ff9100] hover:bg-[#ffb732] text-white rounded-full flex flex-col items-center justify-center shadow-[0_6px_0_#cc7400] hover:shadow-[0_3px_0_#cc7400] hover:translate-y-[3px] active:translate-y-[6px] active:shadow-none transition-all border-2 md:border-4 border-white font-display font-bold"
         >

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useLang } from '../App';
+import { useEffect, useRef, useState } from 'react';
+import { useLang } from '../lib/lang';
 import { motion, AnimatePresence } from 'motion/react';
 import { track, isTestSession, isLocal } from '../lib/analytics';
 
@@ -26,6 +26,13 @@ export default function SectionEgg() {
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [skipped, setSkipped] = useState(false); // 点了"以后再说"
   const [eggImgOk, setEggImgOk] = useState(true); // 蛋图加载失败则回退 emoji
+  const mountedRef = useRef(true);
+  const demoSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+    if (demoSuccessTimerRef.current) clearTimeout(demoSuccessTimerRef.current);
+  }, []);
 
   // 中英分流：两套文案非互译，按各自语境写（不是翻译）。「神秘惊喜」钩子团队待定，先留口子。
   const t = {
@@ -89,7 +96,11 @@ export default function SectionEgg() {
 
     // 演示兜底 / 本地环境：跳过真实请求，假装成功，让全流程可演（本地测的留资不进线上库）
     if (DEMO_MODE || isLocal()) {
-      setTimeout(() => setStatus('success'), 600);
+      if (demoSuccessTimerRef.current) clearTimeout(demoSuccessTimerRef.current);
+      demoSuccessTimerRef.current = setTimeout(() => {
+        demoSuccessTimerRef.current = null;
+        if (mountedRef.current) setStatus('success');
+      }, 600);
       return;
     }
 
@@ -106,9 +117,9 @@ export default function SectionEgg() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(String(res.status));
-      setStatus('success');
+      if (mountedRef.current) setStatus('success');
     } catch (_e) {
-      setStatus('error');
+      if (mountedRef.current) setStatus('error');
     }
   };
 

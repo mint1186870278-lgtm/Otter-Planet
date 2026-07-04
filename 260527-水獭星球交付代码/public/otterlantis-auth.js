@@ -295,7 +295,7 @@
 
   function renderIdentitySelect() {
     return `
-      <section class="otter-auth-shell otter-auth-shell--identity" data-panel="identity">
+      <div class="otter-auth-shell otter-auth-shell--identity" data-panel="identity">
         <img class="otter-auth-paper-bg" src="${asset("/0-1/parchment-card-bg.webp")}" alt="">
         <img class="otter-auth-header-decor" src="${asset("/0-1/header-otter-decoration.webp")}" alt="">
         <div class="otter-auth-identity-content">
@@ -321,13 +321,13 @@
           <button class="otter-auth-login-entry" type="button" data-view="${VIEWS.login}">${t("loginEntry")}</button>
           <button class="otter-auth-skip-button" type="button" data-skip-auth>${t("skip")}</button>
         </div>
-      </section>
+      </div>
     `;
   }
 
   function renderChildRegister() {
     return `
-      <section class="otter-auth-shell otter-auth-shell--register" data-panel="register-child">
+      <div class="otter-auth-shell otter-auth-shell--register" data-panel="register-child">
         <img class="otter-auth-register-bg" src="${asset("/0-2/register-bg-paper.webp")}" alt="">
         <div class="otter-auth-register-content">
           ${renderRoleTabs("child")}
@@ -353,13 +353,13 @@
             <div class="otter-auth-id" data-id-box="child"></div>
           </form>
         </div>
-      </section>
+      </div>
     `;
   }
 
   function renderGuardianRegister() {
     return `
-      <section class="otter-auth-shell otter-auth-shell--register" data-panel="register-guardian">
+      <div class="otter-auth-shell otter-auth-shell--register" data-panel="register-guardian">
         <img class="otter-auth-register-bg" src="${asset("/0-2/register-bg-paper.webp")}" alt="">
         <img class="otter-auth-house-decor" src="${asset("/0-2/parent-house.webp")}" alt="">
         <div class="otter-auth-register-content">
@@ -387,13 +387,13 @@
             <div class="otter-auth-id" data-id-box="guardian"></div>
           </form>
         </div>
-      </section>
+      </div>
     `;
   }
 
   function renderLoginForm() {
     return `
-      <section class="otter-auth-shell otter-auth-shell--login" data-panel="login">
+      <div class="otter-auth-shell otter-auth-shell--login" data-panel="login">
         <img class="otter-auth-register-bg" src="${asset("/0-2/register-bg-paper.webp")}" alt="">
         <div class="otter-auth-register-content">
           <button class="otter-auth-back-button" type="button" data-view="${VIEWS.identity}" aria-label="${t("back")}">${t("back")}</button>
@@ -409,14 +409,14 @@
             <div class="otter-auth-note" data-note="login"></div>
           </form>
         </div>
-      </section>
+      </div>
     `;
   }
 
   function renderCreatedResult(user, role) {
     const idText = role === "guardian" ? t("yourParentId") : t("yourOtterId");
     return `
-      <section class="otter-auth-shell otter-auth-shell--login" data-panel="created">
+      <div class="otter-auth-shell otter-auth-shell--login" data-panel="created">
         <img class="otter-auth-register-bg" src="${asset("/0-2/register-bg-paper.webp")}" alt="">
         <div class="otter-auth-register-content">
           <div class="otter-auth-created">
@@ -425,7 +425,7 @@
             <p class="otter-auth-copy">${t("saveIdHint")}</p>
           </div>
         </div>
-      </section>
+      </div>
     `;
   }
 
