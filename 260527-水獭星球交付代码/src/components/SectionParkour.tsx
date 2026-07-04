@@ -245,19 +245,19 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   }, []);
 
   // 停止移动（对话/里程碑时冻结玩家）
-  const stopMovement = () => {
+  const stopMovement = useCallback(() => {
     keysHeld.current.clear();
     velocityRef.current = { x: 0, z: 0 };
     setMoving(false);
-  };
+  }, []);
 
   // 弹窗弹出瞬间停掉正在进行的视角拖拽，并立即上锁闸门。新架构无 setPointerCapture，
   // 故只需复位拖拽态 + 置位 isViewLockedRef（覆盖里程碑“收集瞬间→弹窗出现”之间的 350ms：
   // 那段 cutsceneFreezeRef 已 true 但 anyPopupOpen 同步 effect 还没把弹窗算进来）。
-  const cancelCanvasDrag = () => {
+  const cancelCanvasDrag = useCallback(() => {
     dragRef.current.active = false;
     isViewLockedRef.current = true;
-  };
+  }, []);
 
   const updateVelocity = useCallback(() => {
     velocityRef.current = computeVelocity(
@@ -292,6 +292,19 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     updateVelocity();
     setMoving(false);
   }, [updateVelocity]);
+
+  useEffect(() => {
+    if (isInView) return;
+    dragRef.current.active = false;
+    stopMovement();
+    setShowNudge(false);
+    setIdleStarHint(false);
+    setWorldPrompt(null);
+    setFeedback(null);
+    setNpcBubble(null);
+    setShowGoHint(false);
+    setShowMouseHint(false);
+  }, [isInView, stopMovement]);
 
   const onControlTutorialComplete = useCallback(() => {
     // 阶段 B 可在这里接入“引导去收集第一颗星星”。
@@ -429,6 +442,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   }, [gameState, releaseAllMovementKeys]);
 
   useEffect(() => {
+    if (!isInView) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (gameState !== 'tutorial' && gameState !== 'starGuide' && gameState !== 'playing') return;
       const tag = (e.target as HTMLElement)?.tagName;
@@ -459,7 +473,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [gameState, handleTutorialDirection, isControlTutorialActive, npcDialog, pressMovementKey, releaseMovementKey]);
+  }, [gameState, handleTutorialDirection, isControlTutorialActive, isInView, npcDialog, pressMovementKey, releaseMovementKey]);
 
   // 静止 5 秒后，温和提示最近的未收集任务星；至少间隔 5 秒，避免刷屏。
   useEffect(() => {
@@ -771,6 +785,10 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     stop: srStop,
     reset: srReset,
   } = useSpeechRecognition(lang === 'zh' ? 'zh-CN' : 'en-US');
+
+  useEffect(() => {
+    if (!isInView && srListening) srStop();
+  }, [isInView, srListening, srStop]);
 
   // 识别中：把实时稿同步进输入框（停了之后 chatInput 保留，便于编辑/发送）
   useEffect(() => {
