@@ -134,6 +134,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   const lastIdleHintAtRef = useRef(0);
   const [isControlTutorialActive, setIsControlTutorialActive] = useState(false);
   const [controlTutorialComplete, setControlTutorialComplete] = useState(false);
+  const [loadFullTerrain, setLoadFullTerrain] = useState(false);
   const [showMouseHint, setShowMouseHint] = useState(false); // 键盘教学完成后弹"鼠标转视角"气泡，~6s 或拖过视角后收起
   const hasDraggedViewRef = useRef(false); // 玩家是否真的拖动过视角（学会了就不再唠叨）
   const mouseHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,6 +160,14 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   useEffect(() => {
     currentDirectionIndexRef.current = currentDirectionIndex;
   }, [currentDirectionIndex]);
+
+  useEffect(() => {
+    if (!controlTutorialComplete || loadFullTerrain) return;
+
+    // 完整地形约 35MB，不要在跑酷路由刚进入时抢首屏和教学带宽。
+    const timer = setTimeout(() => setLoadFullTerrain(true), 2500);
+    return () => clearTimeout(timer);
+  }, [controlTutorialComplete, loadFullTerrain]);
 
   useEffect(() => {
     const el = canvasRef.current;
@@ -1251,6 +1260,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
                 guideStarId={guidedStarId}
                 obstacleBurstId={obstacleBurstId}
                 softFocusInteractives={isControlTutorialActive || gameState === 'starGuide'}
+                loadFullTerrain={loadFullTerrain}
                 loadNpcModels={controlTutorialComplete || gameState !== 'tutorial'}
                 onCollect={handleCollect}
                 onObstacleHit={handleObstacleHit}

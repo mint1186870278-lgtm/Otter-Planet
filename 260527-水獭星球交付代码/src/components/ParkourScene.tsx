@@ -34,6 +34,7 @@ interface ParkourSceneProps {
   guideStarId?: number | null;
   obstacleBurstId?: number | null;
   softFocusInteractives?: boolean;
+  loadFullTerrain?: boolean;
   loadNpcModels?: boolean;
   onObstacleHit: (id: number, variant: ActiveObstacle['variant'], position: Vec2) => void;
   onWorldPromptChange?: (prompt: WorldPrompt) => void;
@@ -47,7 +48,7 @@ interface ParkourSceneProps {
   landStarPositions?: { id: number; x: number; z: number }[];
 }
 
-export default function ParkourScene({ velocityRef, playerPosRef, camYawRef, collectedIds, hitEffect, paused = false, skyPhase = 'day', fakeMoonPos = null, realMoonPos = null, focusStarId = null, guideStarId = null, obstacleBurstId = null, softFocusInteractives = false, loadNpcModels = true, onCollect, onObstacleHit, onNpcApproach, onWorldPromptChange, onFakeMoonReach, onRealMoonRisen, onDebugUpdate, debugYRef, creekStarPositions, npcPositions, landStarPositions }: ParkourSceneProps) {
+export default function ParkourScene({ velocityRef, playerPosRef, camYawRef, collectedIds, hitEffect, paused = false, skyPhase = 'day', fakeMoonPos = null, realMoonPos = null, focusStarId = null, guideStarId = null, obstacleBurstId = null, softFocusInteractives = false, loadFullTerrain = false, loadNpcModels = true, onCollect, onObstacleHit, onNpcApproach, onWorldPromptChange, onFakeMoonReach, onRealMoonRisen, onDebugUpdate, debugYRef, creekStarPositions, npcPositions, landStarPositions }: ParkourSceneProps) {
   const creekItems = useMemo(
     () => creekStarsAsCollectibles(creekStarPositions ?? CREEK_STAR_POSITIONS),
     [creekStarPositions]
@@ -59,9 +60,13 @@ export default function ParkourScene({ velocityRef, playerPosRef, camYawRef, col
 
       <CameraRig playerPosRef={playerPosRef} camYawRef={camYawRef} cinematic={!!realMoonPos} />
 
-      <React.Suspense fallback={<LowTerrainShell />}>
-        <TerrainModel />
-      </React.Suspense>
+      {loadFullTerrain ? (
+        <React.Suspense fallback={<LowTerrainShell />}>
+          <TerrainModel />
+        </React.Suspense>
+      ) : (
+        <LowTerrainShell />
+      )}
 
       <CameraOccluders />
 
