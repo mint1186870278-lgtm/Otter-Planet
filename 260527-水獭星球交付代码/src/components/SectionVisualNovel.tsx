@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from 'react';
-import { useLang } from '../App';
+import { useLang } from '../lib/lang';
 import { motion, useInView } from 'motion/react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { streamChat, stripAllBrackets, sanitizeAllBracketsForDisplay, type ChatMessage } from '../lib/stepfunChat';
@@ -249,13 +249,22 @@ const IpCharacter = memo(function IpCharacter() {
 });
 
 // 顶部 HUD：返回 · 进度条 · 星星数。只依赖 progress/stars/lang，memo 后打字机文字变化不会重渲染它。
-const Hud = memo(function Hud({ progress, stars, lang }: { progress: number; stars: number; lang: 'zh' | 'en' }) {
-  const goBack = () => { document.querySelectorAll('section')[2]?.scrollIntoView({ behavior: 'smooth' }); };
+const Hud = memo(function Hud({
+  progress,
+  stars,
+  lang,
+  onBack,
+}: {
+  progress: number;
+  stars: number;
+  lang: 'zh' | 'en';
+  onBack?: () => void;
+}) {
   return (
     <div className="absolute top-0 left-0 right-0 z-20 px-4 md:px-8 pt-4 md:pt-6 h-32 pointer-events-none">
       {/* 返回主菜单 —— 贴左 */}
       <button
-        onClick={goBack}
+        onClick={onBack}
         className="absolute left-4 md:left-8 top-4 md:top-6 pointer-events-auto w-14 h-14 md:w-16 md:h-16 hover:scale-105 active:scale-95 transition-transform"
         aria-label={lang === 'zh' ? '返回' : 'Back'}
       >
@@ -279,7 +288,13 @@ const Hud = memo(function Hud({ progress, stars, lang }: { progress: number; sta
   );
 });
 
-export default function SectionVisualNovel({ onComplete }: { onComplete?: () => void } = {}) {
+export default function SectionVisualNovel({
+  onBack,
+  onComplete,
+}: {
+  onBack?: () => void;
+  onComplete?: () => void;
+} = {}) {
   const { lang } = useLang();
   const containerRef = useRef<HTMLDivElement>(null);
   // 实时可见性（非 once）：用来闸住空格监听 / 录音态，避免别的 section 的空格污染本页。
@@ -287,6 +302,8 @@ export default function SectionVisualNovel({ onComplete }: { onComplete?: () => 
 
   const [isRecording, setIsRecording] = useState(false);
   const voiceStartRef = useRef<number>(0); // 语音开始时间戳，用于计算单次录音时长
+  const voiceReleaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleVoiceReleaseRef = useRef<() => void>(() => {});
   // 浏览器不支持语音时：用户按了麦克风才弹提示，几秒后自动消失（平时不常驻）
   const [voiceHintShown, setVoiceHintShown] = useState(false);
   const voiceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -443,6 +460,10 @@ export default function SectionVisualNovel({ onComplete }: { onComplete?: () => 
   // 不再亮 overlay 弹窗——语音 UI 全在卡片内。松开时若识别稿为空记一次沉默（兜底用）。
   useEffect(() => {
     if (isRecording) {
+      if (voiceReleaseTimerRef.current) {
+        clearTimeout(voiceReleaseTimerRef.current);
+        voiceReleaseTimerRef.current = null;
+      }
       voiceStartRef.current = Date.now();
       track('voice_start', { scene: 'story' });
       srStart();
@@ -452,9 +473,18 @@ export default function SectionVisualNovel({ onComplete }: { onComplete?: () => 
         track('voice_end', { scene: 'story', durationMs: Date.now() - voiceStartRef.current });
         voiceStartRef.current = 0;
         // 松开自动发送：给识别稿一点收尾时间，再决定「发送」或「记一次沉默」
-        setTimeout(() => handleVoiceRelease(), 350);
+        voiceReleaseTimerRef.current = setTimeout(() => {
+          voiceReleaseTimerRef.current = null;
+          handleVoiceReleaseRef.current();
+        }, 350);
       }
     }
+    return () => {
+      if (voiceReleaseTimerRef.current) {
+        clearTimeout(voiceReleaseTimerRef.current);
+        voiceReleaseTimerRef.current = null;
+      }
+    };
   }, [isRecording]);
 
   useEffect(() => {
@@ -504,6 +534,10 @@ export default function SectionVisualNovel({ onComplete }: { onComplete?: () => 
   useEffect(() => {
     if (isInView) return;
     abortRef.current?.abort();
+    if (voiceReleaseTimerRef.current) {
+      clearTimeout(voiceReleaseTimerRef.current);
+      voiceReleaseTimerRef.current = null;
+    }
     setIsRecording(false);
     setIsStreaming(false);
     setVoiceAnswering(false);
@@ -543,6 +577,7 @@ export default function SectionVisualNovel({ onComplete }: { onComplete?: () => 
       }
     }
   };
+  handleVoiceReleaseRef.current = handleVoiceRelease;
 
   // ④语音题发送（单轮）：用啄木鸟 prompt 起一段独立对话，流式显示 AI 肯定回复 →
   // 接住即给⭐ + 自动推进（⑤肯定其实就是这条 AI 回复本身，停留 ~1.1s 让孩子看完再滑）。⑩走 sendStoryAnswer。
@@ -728,7 +763,7 @@ export default function SectionVisualNovel({ onComplete }: { onComplete?: () => 
     <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-[#1E3A8A]">
       {/* 背景 / HUD / IP 立绘 —— 已拆为 memo 子组件，打字机/AI流式每字 setState 不再重渲染它们。 */}
       <Background />
-      <Hud progress={progress} stars={stars} lang={lang} />
+      <Hud progress={progress} stars={stars} lang={lang} onBack={onBack} />
       <IpCharacter />
 
       {/* 卡片组 —— 卡片+按钮纵向列，水平居中。大小/位置全由顶部 LAYOUT 控制。 */}

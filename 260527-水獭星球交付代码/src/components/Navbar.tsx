@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLang } from '../App';
+import { useLang } from '../lib/lang';
 import { Globe, Map, Backpack, Smile, Settings } from 'lucide-react';
 import { motion } from 'motion/react';
 

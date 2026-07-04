@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLang } from '../App';
+import { useLang } from '../lib/lang';
 import { motion, AnimatePresence } from 'motion/react';
 import { track, isTestSession, isLocal } from '../lib/analytics';
 

@@ -2,7 +2,7 @@ import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { TutorialDirection } from '../lib/controlTutorial';
 import shiningStarUrl from '../../shining-star.png';
-import { useLang } from '../App';
+import { useLang } from '../lib/lang';
 
 const DIRECTION_META: Record<TutorialDirection, {
   label: { zh: string; en: string };

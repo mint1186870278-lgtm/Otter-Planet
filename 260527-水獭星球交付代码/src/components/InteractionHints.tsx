@@ -1,6 +1,6 @@
 import { MousePointerClick, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useLang } from '../App';
+import { useLang } from '../lib/lang';
 
 export function TapToContinueHint({ className = '' }: { className?: string }) {
   const { lang } = useLang();

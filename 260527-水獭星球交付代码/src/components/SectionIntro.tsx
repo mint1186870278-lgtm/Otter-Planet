@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useLang } from '../App';
+import { useLang } from '../lib/lang';
 import { motion, useInView } from 'motion/react';
 import { TapToContinueHint } from './InteractionHints';
 import shiningStarUrl from '../../shining-star.png';

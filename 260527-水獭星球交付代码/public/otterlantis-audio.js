@@ -219,8 +219,12 @@
     requestPlay(getDesiredTrackName());
   }
 
+  function getGameSections() {
+    return Array.prototype.slice.call(document.querySelectorAll("#root [data-otter-game-section]"));
+  }
+
   function updateByScrollPosition() {
-    var sections = Array.prototype.slice.call(document.querySelectorAll("section"));
+    var sections = getGameSections();
     if (!sections.length) return;
 
     var viewportCenter = window.innerHeight / 2;
@@ -244,7 +248,7 @@
   function setupObserver() {
     if (observer) observer.disconnect();
 
-    var sections = Array.prototype.slice.call(document.querySelectorAll("section"));
+    var sections = getGameSections();
     if (!sections.length || !("IntersectionObserver" in window)) {
       updateByScrollPosition();
       return;

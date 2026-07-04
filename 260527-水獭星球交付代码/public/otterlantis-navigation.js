@@ -1,13 +1,8 @@
-const PARKOUR_MODULE_URL = "/assets/SectionParkour-Ba-Fk1Jk.js?v=20260619-retell-bg1";
-
 let parkourPrewarmPromise;
 
 function prewarmParkour() {
   if (!parkourPrewarmPromise) {
-    parkourPrewarmPromise = import(PARKOUR_MODULE_URL).catch((error) => {
-      parkourPrewarmPromise = undefined;
-      console.warn("Parkour prewarm failed", error);
-    });
+    parkourPrewarmPromise = Promise.resolve();
   }
 
   return parkourPrewarmPromise;
@@ -34,7 +29,6 @@ function findSectionScroller() {
 function installWheelGuard(scroller) {
   if (scroller.dataset.otterWheelGuard === "on") return;
   scroller.dataset.otterWheelGuard = "on";
-  scroller.style.overflowY = "hidden";
   scroller.style.overscrollBehavior = "none";
 
   const shouldAllowNativeScroll = (event) => {

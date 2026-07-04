@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useLang } from '../App';
+import { useEffect, useRef, useState } from 'react';
+import { useLang } from '../lib/lang';
 import { Play, Volume2, Calendar } from 'lucide-react';
 import { motion } from 'motion/react';
 import Navbar from './Navbar';
@@ -30,6 +30,7 @@ const PARTICLES = Array.from({ length: 12 }, (_, i) => {
 export default function SectionMain({ onEnterStory }: SectionMainProps) {
   const { lang } = useLang();
   const [phase, setPhase] = useState<'idle' | 'flying' | 'map'>('idle');
+  const mapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const text = {
     zh: {
@@ -57,9 +58,17 @@ export default function SectionMain({ onEnterStory }: SectionMainProps) {
   const isLeaving = phase === 'flying' || phase === 'map';
 
   const handleStart = () => {
+    if (mapTimerRef.current) clearTimeout(mapTimerRef.current);
     setPhase('flying');
-    setTimeout(() => setPhase('map'), 800);
+    mapTimerRef.current = setTimeout(() => {
+      setPhase('map');
+      mapTimerRef.current = null;
+    }, 800);
   };
+
+  useEffect(() => () => {
+    if (mapTimerRef.current) clearTimeout(mapTimerRef.current);
+  }, []);
 
   return (
     <div className="w-full h-full relative">
@@ -171,8 +180,6 @@ export default function SectionMain({ onEnterStory }: SectionMainProps) {
             transition={{ duration: 0.4, delay: 0.2 }}
           >
             <motion.div
-              animate={{ scale: [1.0, 1.15, 1.0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
               className="relative cursor-pointer"
               onClick={onEnterStory}
               style={{ filter: 'drop-shadow(0 0 12px rgba(255,145,0,0.6))' }}
@@ -210,55 +217,67 @@ export default function SectionMain({ onEnterStory }: SectionMainProps) {
       </div>
 
       {/* Start Button */}
-      <motion.div
-        className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30"
-        animate={isLeaving ? { y: 200, opacity: 0 } : { y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <button onClick={handleStart} className="kid-button-primary px-16 py-5 text-3xl hover:scale-105">
-          <img src="/Star.webp" alt="" className="w-8 h-8 mr-4 object-contain" />
-          {t.start}
-          <Play className="w-8 h-8 ml-4 fill-white opacity-80" />
-        </button>
-      </motion.div>
+      {phase !== 'map' && (
+        <motion.div
+          className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30"
+          animate={isLeaving ? { y: 200, opacity: 0 } : { y: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          aria-hidden={isLeaving}
+          style={{ pointerEvents: isLeaving ? 'none' : 'auto' }}
+        >
+          <button onClick={handleStart} className="kid-button-primary px-16 py-5 text-3xl hover:scale-105">
+            <img src="/Star.webp" alt="" className="w-8 h-8 mr-4 object-contain" />
+            {t.start}
+            <Play className="w-8 h-8 ml-4 fill-white opacity-80" />
+          </button>
+        </motion.div>
+      )}
 
       {/* Profile Card */}
-      <motion.div
-        className="absolute bottom-8 left-8 z-30"
-        animate={isLeaving ? { x: -200, opacity: 0 } : { x: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="kid-panel px-4 py-3 flex items-center gap-4 cursor-pointer hover:scale-105 transition-transform">
-          <div className="w-16 h-16 bg-[#e6f4ff] rounded-full ring-4 ring-white shadow-inner flex items-center justify-center overflow-hidden">
-            <img src="/Avatar.webp" alt="Profile" className="w-full h-full object-cover" />
-          </div>
-          <div>
-            <div className="font-bold text-otter-text text-lg">{t.profile}</div>
-            <div className="text-sm font-bold text-otter-text flex items-center gap-2 mt-1">
-              {t.level}
-              <div className="w-24 h-3 bg-gray-200 rounded-full overflow-hidden">
-                <div className="w-1/3 h-full bg-otter-orange rounded-full" />
+      {phase !== 'map' && (
+        <motion.div
+          className="absolute bottom-8 left-8 z-30"
+          animate={isLeaving ? { x: -200, opacity: 0 } : { x: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          aria-hidden={isLeaving}
+          style={{ pointerEvents: isLeaving ? 'none' : 'auto' }}
+        >
+          <div className="kid-panel px-4 py-3 flex items-center gap-4 cursor-pointer hover:scale-105 transition-transform">
+            <div className="w-16 h-16 bg-[#e6f4ff] rounded-full ring-4 ring-white shadow-inner flex items-center justify-center overflow-hidden">
+              <img src="/Avatar.webp" alt="Profile" className="w-full h-full object-cover" />
+            </div>
+            <div>
+              <div className="font-bold text-otter-text text-lg">{t.profile}</div>
+              <div className="text-sm font-bold text-otter-text flex items-center gap-2 mt-1">
+                {t.level}
+                <div className="w-24 h-3 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="w-1/3 h-full bg-otter-orange rounded-full" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
 
       {/* News/Events Buttons */}
-      <motion.div
-        className="absolute bottom-8 right-8 z-30 flex gap-4"
-        animate={isLeaving ? { x: 200, opacity: 0 } : { x: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <button className="kid-button-secondary w-20 h-24 !rounded-2xl flex-col gap-2 group">
-          <Volume2 className="w-8 h-8 text-otter-orange group-hover:scale-110 transition-transform" />
-          <span className="text-sm">{t.news}</span>
-        </button>
-        <button className="kid-button-secondary w-20 h-24 !rounded-2xl flex-col gap-2 group">
-          <Calendar className="w-8 h-8 text-otter-orange group-hover:scale-110 transition-transform" />
-          <span className="text-sm">{t.events}</span>
-        </button>
-      </motion.div>
+      {phase !== 'map' && (
+        <motion.div
+          className="absolute bottom-8 right-8 z-30 flex gap-4"
+          animate={isLeaving ? { x: 200, opacity: 0 } : { x: 0, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          aria-hidden={isLeaving}
+          style={{ pointerEvents: isLeaving ? 'none' : 'auto' }}
+        >
+          <button className="kid-button-secondary w-20 h-24 !rounded-2xl flex-col gap-2 group">
+            <Volume2 className="w-8 h-8 text-otter-orange group-hover:scale-110 transition-transform" />
+            <span className="text-sm">{t.news}</span>
+          </button>
+          <button className="kid-button-secondary w-20 h-24 !rounded-2xl flex-col gap-2 group">
+            <Calendar className="w-8 h-8 text-otter-orange group-hover:scale-110 transition-transform" />
+            <span className="text-sm">{t.events}</span>
+          </button>
+        </motion.div>
+      )}
     </div>
   );
 }

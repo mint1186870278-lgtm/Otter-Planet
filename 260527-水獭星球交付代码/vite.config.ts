@@ -30,6 +30,10 @@ function assetVersionStamp(): Plugin {
   const stampPublicUrls = (code: string, includeEntryAssets = false) => {
     const re = includeEntryAssets ? PUBLIC_ENTRY_RE : RE;
     return code.replace(re, (m, url, _ver, offset, str) => {
+      // Vite-built files under /assets/ already carry content hashes. Adding
+      // ?v= here makes the entry module URL differ from lazy chunk imports,
+      // which can instantiate React twice and trigger invalid hook calls.
+      if (url.startsWith('/assets/')) return m;
       const before = str.slice(Math.max(0, offset - 6), offset);
       if (!includeEntryAssets && /url\(\s*['"]?$/.test(before)) return m;
       return `${url}?v=${BUILD_ID}`;

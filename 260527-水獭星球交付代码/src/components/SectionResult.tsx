@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLang } from '../App';
+import { useLang } from '../lib/lang';
 import { motion, AnimatePresence } from 'motion/react';
 import { Play, Pause, ArrowLeft, Loader2, RotateCcw } from 'lucide-react';
 import { useGallery, SLOT_ORDER, type GallerySlotKey } from '../lib/GalleryContext';

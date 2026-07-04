@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useLang } from '../App';
+import { useLang } from '../lib/lang';
 import { motion, AnimatePresence, useInView } from 'motion/react';
 import { ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Mic } from 'lucide-react';
 import { Canvas } from '@react-three/fiber';
@@ -34,28 +34,53 @@ import { SceneErrorBoundary } from './parkour/SceneErrorBoundary';
 export default function SectionParkour({ onComplete }: { onComplete?: () => void } = {}) {
   const { lang } = useLang();
   const { generateSlot } = useGallery(); // 探险相册：遇 NPC / 假月亮时并行生图
+  const onCompleteRef = useRef(onComplete);
+  const timeoutHandlesRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const scheduleTimeout = useCallback((callback: () => void, delay: number) => {
+    const timeout = setTimeout(() => {
+      timeoutHandlesRef.current.delete(timeout);
+      callback();
+    }, delay);
+    timeoutHandlesRef.current.add(timeout);
+    return timeout;
+  }, []);
+  const clearTrackedTimeout = useCallback((timeout: ReturnType<typeof setTimeout> | null | undefined) => {
+    if (!timeout) return;
+    clearTimeout(timeout);
+    timeoutHandlesRef.current.delete(timeout);
+  }, []);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => () => {
+    timeoutHandlesRef.current.forEach(timeout => clearTimeout(timeout));
+    timeoutHandlesRef.current.clear();
+  }, []);
+
   // 场景就绪门控：chunk 下载完后 R3F Canvas + 3D 模型还在初始化，主容器只剩渐变蓝背景（蓝屏）。
   // 用 .otter-landing-wait 遮罩盖住这段空档，轮询到 canvas + 教学方向元素出现（或超时 20s）才撤遮罩。
   // 配合 public/otterlantis-loader.js：markSceneReady() 让加载进度条收尾。
   const [routeSceneReady, setRouteSceneReady] = useState(false);
   useEffect(() => {
     const startAt = Date.now();
-    let timer: ReturnType<typeof setTimeout>;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const poll = () => {
       const hasCanvas = !!document.querySelector('canvas');
       const hasTutorial = !!document.querySelector('[data-tutorial-direction]');
       if ((hasCanvas && hasTutorial) || Date.now() - startAt > 20000) {
-        timer = setTimeout(() => {
+        timer = scheduleTimeout(() => {
           setRouteSceneReady(true);
           (window as { otterParkourLoading?: { markSceneReady?: () => void } }).otterParkourLoading?.markSceneReady?.();
         }, 300);
       } else {
-        timer = setTimeout(poll, 120);
+        timer = scheduleTimeout(poll, 120);
       }
     };
     poll();
-    return () => clearTimeout(timer);
-  }, []);
+    return () => clearTrackedTimeout(timer);
+  }, [clearTrackedTimeout, scheduleTimeout]);
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { amount: 0.5 });
   const [gameState, setGameState] = useState<'tutorial' | 'starGuide' | 'playing'>('tutorial');
@@ -153,6 +178,10 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   // 集齐一段（3/6/9 颗）弹窗：值为里程碑数（3/6/9），null 则不显示。带 NPC 外观线索，点"出发"关闭。
   const [milestonePopup, setMilestonePopup] = useState<number | null>(null);
 
+  const focusCanvas = useCallback(() => {
+    canvasRef.current?.focus({ preventScroll: true });
+  }, []);
+
   useEffect(() => {
     npcDialogRef.current = npcDialog;
   }, [npcDialog]);
@@ -165,9 +194,9 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     if (!controlTutorialComplete || loadFullTerrain) return;
 
     // 完整地形约 35MB，不要在跑酷路由刚进入时抢首屏和教学带宽。
-    const timer = setTimeout(() => setLoadFullTerrain(true), 2500);
-    return () => clearTimeout(timer);
-  }, [controlTutorialComplete, loadFullTerrain]);
+    const timer = scheduleTimeout(() => setLoadFullTerrain(true), 2500);
+    return () => clearTrackedTimeout(timer);
+  }, [clearTrackedTimeout, controlTutorialComplete, loadFullTerrain, scheduleTimeout]);
 
   useEffect(() => {
     const el = canvasRef.current;
@@ -246,10 +275,11 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
       setShowNudge(false);
       setIdleStarHint(false);
       setWorldPrompt(null);
-      if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+      clearTrackedTimeout(nudgeTimerRef.current);
+      nudgeTimerRef.current = null;
     }
     updateVelocity();
-  }, [moving, updateVelocity]);
+  }, [clearTrackedTimeout, moving, updateVelocity]);
 
   const releaseMovementKey = useCallback((key: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown') => {
     keysHeld.current.delete(key);
@@ -269,8 +299,8 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
 
   const startFirstStarGuide = useCallback(() => {
     setGameState('playing');
-    canvasRef.current?.focus();
-  }, []);
+    focusCanvas();
+  }, [focusCanvas]);
 
   const handleTutorialDirection = useCallback((direction: TutorialDirection) => {
     if (!isControlTutorialActive || tutorialStepMovingRef.current) return;
@@ -292,8 +322,9 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     setWorldPrompt(null);
     pressMovementKey(movementKey);
 
-    if (tutorialReleaseTimerRef.current) clearTimeout(tutorialReleaseTimerRef.current);
-    tutorialReleaseTimerRef.current = setTimeout(() => {
+    clearTrackedTimeout(tutorialReleaseTimerRef.current);
+    tutorialReleaseTimerRef.current = scheduleTimeout(() => {
+      tutorialReleaseTimerRef.current = null;
       releaseMovementKey(movementKey);
       tutorialStepMovingRef.current = false;
       setTutorialFlashDirection(null);
@@ -305,14 +336,17 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
         releaseAllMovementKeys();
         onControlTutorialComplete();
         startFirstStarGuide();
-        canvasRef.current?.focus();
+        focusCanvas();
         // 键盘教学全部完成 → 引导重点切到鼠标视角：弹气泡，~6s 后自动收起
         setShowMouseHint(true);
-        if (mouseHintTimerRef.current) clearTimeout(mouseHintTimerRef.current);
-        mouseHintTimerRef.current = setTimeout(() => setShowMouseHint(false), 6000);
+        clearTrackedTimeout(mouseHintTimerRef.current);
+        mouseHintTimerRef.current = scheduleTimeout(() => {
+          setShowMouseHint(false);
+          mouseHintTimerRef.current = null;
+        }, 6000);
       }
     }, TUTORIAL_STEP_MOVE_MS);
-  }, [isControlTutorialActive, onControlTutorialComplete, pressMovementKey, releaseAllMovementKeys, releaseMovementKey, startFirstStarGuide]);
+  }, [clearTrackedTimeout, focusCanvas, isControlTutorialActive, onControlTutorialComplete, pressMovementKey, releaseAllMovementKeys, releaseMovementKey, scheduleTimeout, startFirstStarGuide]);
 
   const playCue = useCallback((kind: 'collect' | 'box' | 'continue') => {
     // 占位音效：用 WebAudio 生成很短的柔和提示音；浏览器限制时静默失败。
@@ -340,8 +374,8 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   const showFeedback = useCallback((kind: FeedbackItem['kind'], text: string) => {
     const id = feedbackSeq.current++;
     setFeedback({ id, kind, text });
-    window.setTimeout(() => setFeedback(current => current?.id === id ? null : current), 900);
-  }, []);
+    scheduleTimeout(() => setFeedback(current => current?.id === id ? null : current), 900);
+  }, [scheduleTimeout]);
 
   // （已移除 321 倒计时：键盘教学 / 引导星完成后直接进入 playing。）
 
@@ -356,8 +390,8 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     setWorldPrompt(null);
     lastCorrectInputTime.current = now;
     lastTutorialPulseAtRef.current = now;
-    canvasRef.current?.focus();
-  }, [controlTutorialComplete, gameState, isControlTutorialActive, isInView]);
+    focusCanvas();
+  }, [controlTutorialComplete, focusCanvas, gameState, isControlTutorialActive, isInView]);
 
   useEffect(() => {
     if (!isControlTutorialActive) return;
@@ -376,8 +410,9 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   }, [isControlTutorialActive]);
 
   useEffect(() => () => {
-    if (tutorialReleaseTimerRef.current) clearTimeout(tutorialReleaseTimerRef.current);
-  }, []);
+    clearTrackedTimeout(tutorialReleaseTimerRef.current);
+    tutorialReleaseTimerRef.current = null;
+  }, [clearTrackedTimeout]);
 
   useEffect(() => {
     if (gameState !== 'starGuide') return;
@@ -444,23 +479,27 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
         setShowNudge(false);
         setIdleStarHint(true);
         const focusedId = target?.id ?? null;
-        setTimeout(() => {
+        scheduleTimeout(() => {
           setIdleStarHint(false);
           setFocusStarId(current => current === focusedId && focusedId !== 0 ? null : current);
         }, 2600);
       }
     }, 500);
     return () => clearInterval(timer);
-  }, [gameState, isControlTutorialActive, npcDialog, fakeMoonDialog, endingActive, milestonePopup, collectedIds]);
+  }, [collectedIds, endingActive, fakeMoonDialog, gameState, isControlTutorialActive, milestonePopup, npcDialog, scheduleTimeout]);
 
   // Start nudge timer when game begins
   useEffect(() => {
     if (gameState !== 'playing' || nudgeShownRef.current || isControlTutorialActive) return;
-    nudgeTimerRef.current = setTimeout(() => {
+    nudgeTimerRef.current = scheduleTimeout(() => {
       if (!nudgeShownRef.current) setShowNudge(true);
+      nudgeTimerRef.current = null;
     }, 5000);
-    return () => { if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current); };
-  }, [gameState, isControlTutorialActive]);
+    return () => {
+      clearTrackedTimeout(nudgeTimerRef.current);
+      nudgeTimerRef.current = null;
+    };
+  }, [clearTrackedTimeout, gameState, isControlTutorialActive, scheduleTimeout]);
 
   // Sync nudgeShownRef so the nudge timer effect can read it without stale closure
   useEffect(() => {
@@ -484,8 +523,8 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     setShakeBar(true);
     setGlowBar(true);
     stopMovement();
-    setTimeout(() => setShakeBar(false), 350);
-    setTimeout(() => setGlowBar(false), 700);
+    scheduleTimeout(() => setShakeBar(false), 350);
+    scheduleTimeout(() => setGlowBar(false), 700);
     // 集齐一段：弹中央卡片（含对应 NPC 外观线索），冻结玩家直到点"出发"
     cutsceneFreezeRef.current = true;
     setMilestonePopup(count);
@@ -495,7 +534,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   const closeMilestone = () => {
     setMilestonePopup(null);
     cutsceneFreezeRef.current = false;
-    canvasRef.current?.focus();
+    focusCanvas();
   };
 
   const NPC_REQUIRED = [3, 6, 9];
@@ -523,9 +562,9 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
         ],
       }[lang];
       setNpcBubble({ npcIndex: index, text: bubbles[index] });
-      setTimeout(() => setNpcBubble(null), 3000);
+      scheduleTimeout(() => setNpcBubble(null), 3000);
     }
-  }, [isControlTutorialActive, gameState, totalCollected, lang, cancelCanvasDrag, stopMovement]);
+  }, [isControlTutorialActive, gameState, totalCollected, lang, cancelCanvasDrag, stopMovement, scheduleTimeout]);
 
   const handleCollect = (id: number, type: StaticCollectible['type']) => {
     setCollectedIds(prev => new Set([...prev, id]));
@@ -536,7 +575,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     lastMoveAtRef.current = Date.now();
     playCue('collect');
     showFeedback('star', '+1');
-    setTimeout(() => setHitEffect(null), 400);
+    scheduleTimeout(() => setHitEffect(null), 400);
     // ⚠️ 用 ref 累计、纯函数 setState，绝不在 updater 里放副作用——
     // React StrictMode 会双调用 updater，导致 triggerMilestone/点亮动画被触发两次。
     const next = Math.min(TOTAL_STARS, totalCollectedRef.current + 1);
@@ -544,14 +583,14 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     totalCollectedRef.current = next;
     setTotalCollected(next);
     setJustLitIndex(next - 1); // 第 next 颗(序号 next-1)刚点亮，弹一下
-    setTimeout(() => setJustLitIndex(cur => (cur === next - 1 ? null : cur)), 350);
+    scheduleTimeout(() => setJustLitIndex(cur => (cur === next - 1 ? null : cur)), 350);
     if (MILESTONES.includes(next)) {
       // ⚠️ 立即冻结：里程碑弹窗本身延迟 350ms 才出，这 350ms 里若不冻结，
       // 玩家会在密集星区继续冲过下一段星 → 同时排两个里程碑，关一个又弹一个（"卡住"假象）。
       cutsceneFreezeRef.current = true;
       cancelCanvasDrag(); // 收集瞬间玩家常按住鼠标拖动找路 → 立即停拖拽并上锁闸门（覆盖弹窗前 350ms）
       stopMovement();
-      setTimeout(() => triggerMilestone(next), 350);
+      scheduleTimeout(() => triggerMilestone(next), 350);
     }
   };
 
@@ -563,11 +602,11 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
       setWorldPrompt(null);
       playCue('box');
       showFeedback('box', '砰！');
-      setTimeout(() => setObstacleBurstId(null), 350);
+      scheduleTimeout(() => setObstacleBurstId(null), 350);
     } else {
       setHitEffect('rock');
     }
-    setTimeout(() => setHitEffect(null), 400);
+    scheduleTimeout(() => setHitEffect(null), 400);
   };
 
   // ── 月亮演出编排 ───────────────────────────────────────────────────────────
@@ -606,8 +645,8 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     setSkyPhase('dusk');         // 平滑渐变到暮色（SkyAndLights 用 lerp）
     cutsceneFreezeRef.current = false;
     setShowGoHint(true);
-    setTimeout(() => setShowGoHint(false), 5000);
-    canvasRef.current?.focus();
+    scheduleTimeout(() => setShowGoHint(false), 5000);
+    focusCanvas();
   };
 
   // NPC3 对话结束 → 触发终点：冻结、天空转夜、真月亮在远处升起。
@@ -622,9 +661,9 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
 
   // 真月亮升起完成 → 停留 2s → 跳转结算
   const handleRealMoonRisen = () => {
-    setTimeout(() => {
+    scheduleTimeout(() => {
       track('stage_complete', { stage: 'parkour' }); // 埋点：跑酷通关（真月亮升起完成、跳转结算前）
-      onComplete?.();
+      onCompleteRef.current?.();
     }, 2000);
   };
 
@@ -666,11 +705,17 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   const [voiceHintShown, setVoiceHintShown] = useState(false);
   const voiceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showVoiceHint = () => {
-    if (voiceHintTimerRef.current) clearTimeout(voiceHintTimerRef.current);
+    clearTrackedTimeout(voiceHintTimerRef.current);
     setVoiceHintShown(true);
-    voiceHintTimerRef.current = setTimeout(() => setVoiceHintShown(false), 3000);
+    voiceHintTimerRef.current = scheduleTimeout(() => {
+      setVoiceHintShown(false);
+      voiceHintTimerRef.current = null;
+    }, 3000);
   };
-  useEffect(() => () => { if (voiceHintTimerRef.current) clearTimeout(voiceHintTimerRef.current); }, []);
+  useEffect(() => () => {
+    clearTrackedTimeout(voiceHintTimerRef.current);
+    voiceHintTimerRef.current = null;
+  }, [clearTrackedTimeout]);
   // AI 对话状态
   const [messages, setMessages] = useState<ChatMessage[]>([]); // system + assistant开场 + 往返历史
   const [chatInput, setChatInput] = useState('');
@@ -833,7 +878,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     const idx = closed - 1;
     setNpcDone(prev => new Set(prev).add(idx));
     setNpcDialog(null);
-    canvasRef.current?.focus();
+    focusCanvas();
     // 探险相册：对话完成即并行生图（fire-and-forget，互不等待）
     if (closed === 1) generateSlot('npc1');
     else if (closed === 2) generateSlot('npc2');

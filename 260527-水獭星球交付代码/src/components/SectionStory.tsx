@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLang } from '../App';
+import { useLang } from '../lib/lang';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'motion/react';
 
@@ -104,7 +104,7 @@ export default function SectionStory({ onComplete }: SectionStoryProps) {
   const prev = () => page > 0 && setPage(p => p - 1);
 
   return (
-    <div ref={containerRef} className="w-full h-screen relative flex flex-col items-center justify-center bg-gradient-to-b from-[#0a1128] via-[#071330] to-[#040914] overflow-hidden p-4 md:p-8">
+    <div ref={containerRef} className="w-full h-screen relative grid place-items-center bg-gradient-to-b from-[#0a1128] via-[#071330] to-[#040914] overflow-hidden px-4 py-3 md:p-8">
       {/* Starry bg */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Layer 1 (Furthest, moves slowest) */}
@@ -177,11 +177,15 @@ export default function SectionStory({ onComplete }: SectionStoryProps) {
         </motion.div>
       </div>
 
+      <div className="relative z-10 grid h-full w-full max-w-[720px] grid-rows-[minmax(0,1fr)_auto] items-center gap-3 md:gap-4">
       {/* TV Container */}
-      <div className="w-full max-w-[720px] relative z-10 flex flex-col items-center justify-center mb-6">
+      <div className="min-h-0 w-full relative z-10 flex items-center justify-center">
 
         {/* TV Outer Shell */}
-        <div className="w-full bg-[#f59e0b] rounded-[3rem] p-4 md:p-8 shadow-[0_12px_0_#b45309,0_20px_25px_-5px_rgba(0,0,0,0.5)] border-8 border-[#fef3c7] flex flex-row gap-4 md:gap-8 items-stretch relative">
+        <div
+          className="bg-[#f59e0b] rounded-[2rem] md:rounded-[3rem] p-3 md:p-6 shadow-[0_10px_0_#b45309,0_18px_24px_-5px_rgba(0,0,0,0.5)] border-4 md:border-8 border-[#fef3c7] flex flex-row gap-3 md:gap-6 items-stretch relative aspect-[4/3] max-h-full"
+          style={{ width: 'min(100%, calc((100vh - 190px) * 1.3333))' }}
+        >
 
           {/* Screen Bezel */}
           <div className="flex-1 bg-[#1f2937] rounded-[2rem] shadow-[inset_0_4px_10px_rgba(0,0,0,0.8)] overflow-hidden flex">
@@ -214,23 +218,23 @@ export default function SectionStory({ onComplete }: SectionStoryProps) {
           </div>
 
           {/* TV Control Panel */}
-          <div className="w-20 md:w-28 flex flex-col items-center bg-[#d97706] rounded-[2rem] shadow-inner border-4 border-[#b45309] pt-6 md:pt-8 pb-4 md:pb-6 gap-0">
+          <div className="w-16 md:w-24 flex flex-col items-center bg-[#d97706] rounded-[1.5rem] md:rounded-[2rem] shadow-inner border-4 border-[#b45309] pt-4 md:pt-6 pb-3 md:pb-5 gap-0">
             {/* Dials */}
-            <div className="flex flex-col gap-3 md:gap-4 mb-4 md:mb-6">
-              <div className="w-14 h-14 md:w-20 md:h-20 rounded-full bg-gray-800 shadow-[0_6px_0_#374151,0_0_15px_rgba(0,0,0,0.5)] border-4 border-gray-600 relative cursor-pointer active:translate-y-1 active:shadow-[0_2px_0_#374151,0_0_15px_rgba(0,0,0,0.5)] transition-all">
-                <div className="w-2 h-6 md:w-3 md:h-8 bg-gray-400 absolute top-1 md:top-2 left-1/2 -translate-x-1/2 rounded-full shadow-sm"></div>
+            <div className="flex flex-col gap-2 md:gap-3 mb-3 md:mb-5">
+              <div className="w-11 h-11 md:w-16 md:h-16 rounded-full bg-gray-800 shadow-[0_6px_0_#374151,0_0_15px_rgba(0,0,0,0.5)] border-4 border-gray-600 relative cursor-pointer active:translate-y-1 active:shadow-[0_2px_0_#374151,0_0_15px_rgba(0,0,0,0.5)] transition-all">
+                <div className="w-2 h-5 md:w-3 md:h-7 bg-gray-400 absolute top-1 md:top-2 left-1/2 -translate-x-1/2 rounded-full shadow-sm"></div>
               </div>
-              <div className="w-14 h-14 md:w-20 md:h-20 rounded-full bg-gray-800 shadow-[0_6px_0_#374151,0_0_15px_rgba(0,0,0,0.5)] border-4 border-gray-600 relative rotate-45 cursor-pointer active:translate-y-1 active:shadow-[0_2px_0_#374151,0_0_15px_rgba(0,0,0,0.5)] transition-all">
-                <div className="w-2 h-6 md:w-3 md:h-8 bg-gray-400 absolute top-1 md:top-2 left-1/2 -translate-x-1/2 rounded-full shadow-sm"></div>
+              <div className="w-11 h-11 md:w-16 md:h-16 rounded-full bg-gray-800 shadow-[0_6px_0_#374151,0_0_15px_rgba(0,0,0,0.5)] border-4 border-gray-600 relative rotate-45 cursor-pointer active:translate-y-1 active:shadow-[0_2px_0_#374151,0_0_15px_rgba(0,0,0,0.5)] transition-all">
+                <div className="w-2 h-5 md:w-3 md:h-7 bg-gray-400 absolute top-1 md:top-2 left-1/2 -translate-x-1/2 rounded-full shadow-sm"></div>
               </div>
             </div>
 
             {/* Speaker Grille */}
-            <div className="flex flex-col gap-2 w-full px-4 md:px-6">
-              <div className="w-full h-3 md:h-4 bg-[#78350f] rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
-              <div className="w-full h-3 md:h-4 bg-[#78350f] rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
-              <div className="w-full h-3 md:h-4 bg-[#78350f] rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
-              <div className="w-full h-3 md:h-4 bg-[#78350f] rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
+            <div className="flex flex-col gap-1.5 md:gap-2 w-full px-3 md:px-5">
+              <div className="w-full h-2.5 md:h-3.5 bg-[#78350f] rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
+              <div className="w-full h-2.5 md:h-3.5 bg-[#78350f] rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
+              <div className="w-full h-2.5 md:h-3.5 bg-[#78350f] rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
+              <div className="w-full h-2.5 md:h-3.5 bg-[#78350f] rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"></div>
             </div>
           </div>
 
@@ -238,15 +242,16 @@ export default function SectionStory({ onComplete }: SectionStoryProps) {
       </div>
 
       {/* Caption Text Bar */}
-      <div className="kid-panel w-full max-w-[720px] h-auto min-h-[100px] grid items-center p-4 md:px-8 z-10 relative"
-        style={{ gridTemplateColumns: `${page === 0 ? '0px' : '148px'} 1fr 148px`, gap: '16px' }}
+      <div className="kid-panel w-full h-auto min-h-[88px] grid items-center gap-2 p-3 md:gap-4 md:px-6 md:py-3 z-10 relative"
+        style={{ gridTemplateColumns: `${page === 0 ? '0px' : 'clamp(72px, 16vw, 136px)'} minmax(0, 1fr) clamp(92px, 18vw, 136px)` }}
       >
         {page > 0 && (
           <button
+            type="button"
             onClick={prev}
-            className="kid-button-primary px-6 py-3 w-full shrink-0"
+            className="kid-button-primary px-3 py-2 md:px-5 md:py-2.5 w-full shrink-0"
           >
-            <ChevronLeft className="w-8 h-8" />
+            <ChevronLeft className="w-6 h-6 md:w-7 md:h-7" />
           </button>
         )}
         {page === 0 && <div />}
@@ -258,14 +263,30 @@ export default function SectionStory({ onComplete }: SectionStoryProps) {
           </p>
         </div>
 
-        <button
-          onClick={page === maxPage ? onComplete : next}
-          className={`kid-button-primary px-6 py-3 w-full shrink-0 ${page === maxPage ? '!bg-green-500 !shadow-[0_8px_0_#166534] hover:!shadow-[0_4px_0_#166534]' : ''}`}
-        >
-          {page === maxPage ? t.start : (
-            <><span className="sr-only">{t.next}</span><ChevronRight className="w-8 h-8" /></>
-          )}
-        </button>
+        {page === maxPage ? (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={onComplete}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              event.preventDefault();
+              onComplete();
+            }}
+            className="kid-button-primary px-3 py-2 md:px-5 md:py-2.5 w-full shrink-0 text-sm md:text-base !bg-green-500 !shadow-[0_8px_0_#166534] hover:!shadow-[0_4px_0_#166534] cursor-pointer"
+          >
+            {t.start}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={next}
+            className="kid-button-primary px-3 py-2 md:px-5 md:py-2.5 w-full shrink-0 text-sm md:text-base"
+          >
+            <><span className="sr-only">{t.next}</span><ChevronRight className="w-6 h-6 md:w-7 md:h-7" /></>
+          </button>
+        )}
+      </div>
       </div>
     </div>
   );

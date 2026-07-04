@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useRef, useEffect, Component } from 'react';
+import React, { useState, useRef, useEffect, Component } from 'react';
 import SectionMain from './components/SectionMain';
 import SectionStory from './components/SectionStory';
 import SectionIntro from './components/SectionIntro';
@@ -11,19 +11,7 @@ import SectionResult from './components/SectionResult';
 import SectionEgg from './components/SectionEgg';
 import { GalleryProvider } from './lib/GalleryContext';
 import { track, trackBeacon, trackOnce, setTrackLang, type SectionName } from './lib/analytics';
-
-type Language = 'zh' | 'en';
-interface LangContextType {
-  lang: Language;
-  toggleLang: () => void;
-}
-
-export const LangContext = createContext<LangContextType>({
-  lang: 'zh',
-  toggleLang: () => {},
-});
-
-export const useLang = () => useContext(LangContext);
+import { LangContext, type Language } from './lib/lang';
 
 // 错误边界：兜住 React.lazy(SectionParkour) 加载失败（chunk 404 / 网络断开）。
 // 无此边界时，import() 的 rejected Promise 会无声地崩溃整个 React 树，
@@ -55,9 +43,27 @@ class ParkourErrorBoundary extends Component<
 
 // 当前可见 section（供 page_unload 兜底上报最后一段停留时长用）
 const activeSection: { name: SectionName | null; enterTime: number } = { name: null, enterTime: 0 };
+const SECTION_COUNT = 7;
+const PENDING_SECTION_KEY = 'otter_pending_section';
 
-// 埋点用的 section 包装：仍渲染真实 <section>（scrollToSection 靠 querySelectorAll('section') 按序取，
-// 顺序/标签不能变），额外用 IntersectionObserver 采集「进入视野→离开视野」的停留时长。
+function clampSectionIndex(index: number) {
+  return Math.min(Math.max(index, 0), SECTION_COUNT - 1);
+}
+
+function readPendingSectionIndex() {
+  try {
+    const raw = sessionStorage.getItem(PENDING_SECTION_KEY);
+    sessionStorage.removeItem(PENDING_SECTION_KEY);
+    if (raw === null) return 0;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? clampSectionIndex(parsed) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// 埋点用的 section 包装：仍渲染真实 <section>，并用 data-otter-game-section
+// 标出“游戏主流程屏”。全局脚本只能读这个标记，避免把登录弹窗等 DOM 误判成游戏页。
 function TrackedSection({ name, className, children, innerRef }: {
   name: SectionName;
   className: string;
@@ -97,7 +103,7 @@ function TrackedSection({ name, className, children, innerRef }: {
     else if (innerRef) (innerRef as React.MutableRefObject<HTMLElement | null>).current = el;
   };
 
-  return <section ref={setRefs} className={className}>{children}</section>;
+  return <section ref={setRefs} data-otter-game-section={name} className={className}>{children}</section>;
 }
 
 // 「接近视口才挂载」门控：观察目标元素，rootMargin 放大到提前 N 屏触发。
@@ -123,7 +129,10 @@ function ParkourLoading() {
   // 配合 public/otterlantis-loader.js：带 .otter-landing-wait 类 → loader 识别并显示加载进度条；
   // 调 start() 启动进度统计。3D canvas + 教学方向元素就绪后 loader 自动收尾。
   const lang = new URLSearchParams(window.location.search).get('lang')?.toLowerCase() === 'en' ? 'en' : 'zh';
-  (window as { otterParkourLoading?: { start?: () => void } }).otterParkourLoading?.start?.();
+
+  useEffect(() => {
+    (window as { otterParkourLoading?: { start?: () => void } }).otterParkourLoading?.start?.();
+  }, []);
 
   // 兜底：nearParkour 未触发 / React.lazy chunk 加载超时时，25s 后强制 markSceneReady()，
   // 避免进度条永远卡在 45%（SectionParkour 未挂载则其内部 20s timer 永远不会执行）。
@@ -151,6 +160,8 @@ export default function App() {
   const [lang, setLang] = useState<Language>(() =>
     new URLSearchParams(window.location.search).get('lang')?.toLowerCase() === 'en' ? 'en' : 'zh'
   );
+  const [activeSectionIndex, setActiveSectionIndex] = useState(readPendingSectionIndex);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // 跑酷 section 的「接近视口」门控：滚到 intro(前一屏)附近就触发，提前加载 Three.js chunk。
   const [parkourRef, nearParkour] = useNearViewport('200% 0px');
@@ -179,18 +190,78 @@ export default function App() {
     return () => window.removeEventListener('pagehide', flush);
   }, []);
 
+  // 这个页面现在由 React 状态驱动整屏轨道 transform，不再允许浏览器文档滚动参与导航。
+  // 点击故事/对白控件时，浏览器仍可能因为 focus/scroll anchoring 把 window 或内部轨道滚出 0，
+  // 结果是跑酷 canvas 已经挂载但整体被顶出视口。切屏后主动归零，保证 canvas 落在可见屏。
+  useEffect(() => {
+    const resetScroll = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (viewportRef.current) {
+        viewportRef.current.scrollTop = 0;
+        viewportRef.current.scrollLeft = 0;
+      }
+      if (containerRef.current) {
+        containerRef.current.scrollTop = 0;
+        containerRef.current.scrollLeft = 0;
+      }
+    };
+
+    resetScroll();
+    const frame = window.requestAnimationFrame(resetScroll);
+    const settleTimer = window.setTimeout(resetScroll, 120);
+    const animationTimer = window.setTimeout(resetScroll, 760);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(settleTimer);
+      window.clearTimeout(animationTimer);
+    };
+  }, [activeSectionIndex]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const keepViewportPinned = () => {
+      if (viewport.scrollTop !== 0) viewport.scrollTop = 0;
+      if (viewport.scrollLeft !== 0) viewport.scrollLeft = 0;
+    };
+
+    viewport.addEventListener('scroll', keepViewportPinned, { passive: true });
+    return () => viewport.removeEventListener('scroll', keepViewportPinned);
+  }, []);
+
   const scrollToSection = (index: number) => {
-    const sections = containerRef.current?.querySelectorAll('section');
-    sections?.[index]?.scrollIntoView({ behavior: 'smooth' });
+    const next = clampSectionIndex(index);
+    try {
+      sessionStorage.setItem(PENDING_SECTION_KEY, String(next));
+      window.setTimeout(() => {
+        if (sessionStorage.getItem(PENDING_SECTION_KEY) === String(next)) {
+          sessionStorage.removeItem(PENDING_SECTION_KEY);
+        }
+      }, 5000);
+    } catch {
+      // Session storage can be unavailable in hardened browser modes.
+    }
+    setActiveSectionIndex(current => (next === current ? current : next));
   };
 
   return (
     <LangContext.Provider value={{ lang, toggleLang }}>
       <GalleryProvider>
         <div
-          ref={containerRef}
-          className="relative w-screen h-screen overflow-y-scroll overflow-x-hidden hide-scrollbar snap-y snap-mandatory scroll-smooth font-body bg-otter-blue-ocean text-white"
+          ref={viewportRef}
+          className="fixed inset-0 w-screen h-screen overflow-hidden font-body bg-otter-blue-ocean text-white"
+          style={{ overflow: 'clip' }}
         >
+          <div
+            ref={containerRef}
+            className="w-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+            style={{
+              height: `${SECTION_COUNT * 100}vh`,
+              transform: `translate3d(0, -${activeSectionIndex * 100}vh, 0)`,
+            }}
+          >
           {/* Section 0: Main Menu */}
           <TrackedSection name="main" className="w-full h-screen snap-start snap-always overflow-hidden relative">
             <SectionMain onEnterStory={() => scrollToSection(1)} />
@@ -221,7 +292,7 @@ export default function App() {
 
           {/* Section 4: Visual Novel (月亮向导讲故事) */}
           <TrackedSection name="story" className="w-full h-screen snap-start snap-always overflow-hidden relative">
-            <SectionVisualNovel onComplete={() => scrollToSection(5)} />
+            <SectionVisualNovel onBack={() => scrollToSection(2)} onComplete={() => scrollToSection(5)} />
           </TrackedSection>
 
           {/* Section 5: Result (探险相册) */}
@@ -233,6 +304,7 @@ export default function App() {
           <TrackedSection name="egg" className="w-full h-screen snap-start snap-always overflow-hidden relative">
             <SectionEgg />
           </TrackedSection>
+          </div>
         </div>
       </GalleryProvider>
     </LangContext.Provider>
