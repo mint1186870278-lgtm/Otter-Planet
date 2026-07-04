@@ -1025,6 +1025,10 @@
   cursor: pointer;
 }
 
+body[data-otter-active-section]:not([data-otter-active-section="main"]) .otter-account-switcher {
+  display: none;
+}
+
 @media (max-width: 760px) {
   .otter-auth-overlay {
     align-items: flex-start;

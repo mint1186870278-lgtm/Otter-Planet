@@ -55,14 +55,16 @@ const content = {
 };
 
 interface SectionStoryProps {
+  isActive?: boolean;
   onComplete: () => void;
 }
 
-export default function SectionStory({ onComplete }: SectionStoryProps) {
+export default function SectionStory({ isActive, onComplete }: SectionStoryProps) {
   const { lang } = useLang();
   const [page, setPage] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(containerRef, { once: true, amount: 0.5 });
+  const measuredInView = useInView(containerRef, { amount: 0.5 });
+  const isInView = isActive ?? measuredInView;
   const [displayedText, setDisplayedText] = useState("");
   const textLengthRef = useRef(0);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -89,6 +91,7 @@ export default function SectionStory({ onComplete }: SectionStoryProps) {
   }, [page, lang, isInView, t.pages]);
 
   useEffect(() => {
+    if (!isInView) return;
     const handleMouseMove = (e: MouseEvent) => {
       // Limit parallax offset so it doesn't move too extremely
       setMousePos({
@@ -98,7 +101,7 @@ export default function SectionStory({ onComplete }: SectionStoryProps) {
     };
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [isInView]);
 
   const next = () => page < maxPage && setPage(p => p + 1);
   const prev = () => page > 0 && setPage(p => p - 1);

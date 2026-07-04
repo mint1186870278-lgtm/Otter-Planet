@@ -31,7 +31,7 @@ import {
 import { SceneErrorBoundary } from './parkour/SceneErrorBoundary';
 
 
-export default function SectionParkour({ onComplete }: { onComplete?: () => void } = {}) {
+export default function SectionParkour({ isActive, onComplete }: { isActive?: boolean; onComplete?: () => void } = {}) {
   const { lang } = useLang();
   const { generateSlot } = useGallery(); // 探险相册：遇 NPC / 假月亮时并行生图
   const onCompleteRef = useRef(onComplete);
@@ -82,7 +82,8 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
     return () => clearTrackedTimeout(timer);
   }, [clearTrackedTimeout, scheduleTimeout]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(containerRef, { amount: 0.5 });
+  const measuredInView = useInView(containerRef, { amount: 0.5 });
+  const isInView = isActive ?? measuredInView;
   const [gameState, setGameState] = useState<'tutorial' | 'starGuide' | 'playing'>('tutorial');
   const [moving, setMoving] = useState(false); // true after first key input
   // 玩家真实世界坐标 + 速度向量（开放世界八向移动）。用 ref 避免每帧 setState。
@@ -407,7 +408,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   }, [controlTutorialComplete, focusCanvas, gameState, isControlTutorialActive, isInView]);
 
   useEffect(() => {
-    if (!isControlTutorialActive) return;
+    if (!isInView || !isControlTutorialActive) return;
     const timer = setInterval(() => {
       const now = Date.now();
       if (shouldPulseControlTutorialHint({
@@ -420,7 +421,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
       }
     }, 300);
     return () => clearInterval(timer);
-  }, [isControlTutorialActive]);
+  }, [isControlTutorialActive, isInView]);
 
   useEffect(() => () => {
     clearTrackedTimeout(tutorialReleaseTimerRef.current);
@@ -428,7 +429,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
   }, [clearTrackedTimeout]);
 
   useEffect(() => {
-    if (gameState !== 'starGuide') return;
+    if (!isInView || gameState !== 'starGuide') return;
     const timer = setInterval(() => {
       if (hasReachedGuidedStar(playerPosRef.current, guidedStarTargetRef.current, STAR_GUIDE_REACH_RADIUS)) {
         releaseAllMovementKeys();
@@ -439,7 +440,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
       }
     }, 150);
     return () => clearInterval(timer);
-  }, [gameState, releaseAllMovementKeys]);
+  }, [gameState, isInView, releaseAllMovementKeys]);
 
   useEffect(() => {
     if (!isInView) return;
@@ -477,7 +478,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
 
   // 静止 5 秒后，温和提示最近的未收集任务星；至少间隔 5 秒，避免刷屏。
   useEffect(() => {
-    if (gameState !== 'playing' || isControlTutorialActive) return;
+    if (!isInView || gameState !== 'playing' || isControlTutorialActive) return;
     const timer = setInterval(() => {
       if (npcDialog !== null || fakeMoonDialog !== 0 || endingActive || milestonePopup !== null) return;
       const target = findNearestUncollectedStar(playerPosRef.current, STAR_POSITIONS, collectedIds);
@@ -500,11 +501,11 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
       }
     }, 500);
     return () => clearInterval(timer);
-  }, [collectedIds, endingActive, fakeMoonDialog, gameState, isControlTutorialActive, milestonePopup, npcDialog, scheduleTimeout]);
+  }, [collectedIds, endingActive, fakeMoonDialog, gameState, isControlTutorialActive, isInView, milestonePopup, npcDialog, scheduleTimeout]);
 
   // Start nudge timer when game begins
   useEffect(() => {
-    if (gameState !== 'playing' || nudgeShownRef.current || isControlTutorialActive) return;
+    if (!isInView || gameState !== 'playing' || nudgeShownRef.current || isControlTutorialActive) return;
     nudgeTimerRef.current = scheduleTimeout(() => {
       if (!nudgeShownRef.current) setShowNudge(true);
       nudgeTimerRef.current = null;
@@ -513,7 +514,7 @@ export default function SectionParkour({ onComplete }: { onComplete?: () => void
       clearTrackedTimeout(nudgeTimerRef.current);
       nudgeTimerRef.current = null;
     };
-  }, [clearTrackedTimeout, gameState, isControlTutorialActive, scheduleTimeout]);
+  }, [clearTrackedTimeout, gameState, isControlTutorialActive, isInView, scheduleTimeout]);
 
   // Sync nudgeShownRef so the nudge timer effect can read it without stale closure
   useEffect(() => {

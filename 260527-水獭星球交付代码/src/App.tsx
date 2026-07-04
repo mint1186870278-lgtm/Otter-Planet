@@ -12,6 +12,7 @@ import SectionEgg from './components/SectionEgg';
 import { GalleryProvider } from './lib/GalleryContext';
 import { track, trackBeacon, trackOnce, setTrackLang, type SectionName } from './lib/analytics';
 import { LangContext, type Language } from './lib/lang';
+import { SECTION_COUNT, readPendingSectionIndex, rememberPendingSectionIndex, sectionNameAt } from './lib/sectionFlow';
 
 // 错误边界：兜住 React.lazy(SectionParkour) 加载失败（chunk 404 / 网络断开）。
 // 无此边界时，import() 的 rejected Promise 会无声地崩溃整个 React 树，
@@ -43,24 +44,6 @@ class ParkourErrorBoundary extends Component<
 
 // 当前可见 section（供 page_unload 兜底上报最后一段停留时长用）
 const activeSection: { name: SectionName | null; enterTime: number } = { name: null, enterTime: 0 };
-const SECTION_COUNT = 7;
-const PENDING_SECTION_KEY = 'otter_pending_section';
-
-function clampSectionIndex(index: number) {
-  return Math.min(Math.max(index, 0), SECTION_COUNT - 1);
-}
-
-function readPendingSectionIndex() {
-  try {
-    const raw = sessionStorage.getItem(PENDING_SECTION_KEY);
-    sessionStorage.removeItem(PENDING_SECTION_KEY);
-    if (raw === null) return 0;
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) ? clampSectionIndex(parsed) : 0;
-  } catch {
-    return 0;
-  }
-}
 
 // 埋点用的 section 包装：仍渲染真实 <section>，并用 data-otter-game-section
 // 标出“游戏主流程屏”。全局脚本只能读这个标记，避免把登录弹窗等 DOM 误判成游戏页。
@@ -161,6 +144,7 @@ export default function App() {
     new URLSearchParams(window.location.search).get('lang')?.toLowerCase() === 'en' ? 'en' : 'zh'
   );
   const [activeSectionIndex, setActiveSectionIndex] = useState(readPendingSectionIndex);
+  const activeSectionName = sectionNameAt(activeSectionIndex);
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // 跑酷 section 的「接近视口」门控：滚到 intro(前一屏)附近就触发，提前加载 Three.js chunk。
@@ -171,6 +155,13 @@ export default function App() {
   // 把当前游戏语言同步给埋点层，使每条埋点都带 gameLang（看板按此分中英版）。
   // 放在 game_start 之前的 effect 里，保证首条事件也带上正确语言。
   useEffect(() => { setTrackLang(lang); }, [lang]);
+
+  useEffect(() => {
+    document.body.dataset.otterActiveSection = activeSectionName;
+    return () => {
+      delete document.body.dataset.otterActiveSection;
+    };
+  }, [activeSectionName]);
 
   // 流程开始（漏斗起点），整局只报一次。用 trackOnce：即便组件重挂也不会重复计数。
   useEffect(() => { trackOnce('game_start'); }, []);
@@ -232,17 +223,7 @@ export default function App() {
   }, []);
 
   const scrollToSection = (index: number) => {
-    const next = clampSectionIndex(index);
-    try {
-      sessionStorage.setItem(PENDING_SECTION_KEY, String(next));
-      window.setTimeout(() => {
-        if (sessionStorage.getItem(PENDING_SECTION_KEY) === String(next)) {
-          sessionStorage.removeItem(PENDING_SECTION_KEY);
-        }
-      }, 5000);
-    } catch {
-      // Session storage can be unavailable in hardened browser modes.
-    }
+    const next = rememberPendingSectionIndex(index);
     setActiveSectionIndex(current => (next === current ? current : next));
   };
 
@@ -269,12 +250,12 @@ export default function App() {
 
           {/* Section 1: Storybook */}
           <TrackedSection name="storybook" className="w-full h-screen snap-start snap-always overflow-hidden relative">
-            <SectionStory onComplete={() => scrollToSection(2)} />
+            <SectionStory isActive={activeSectionName === 'storybook'} onComplete={() => scrollToSection(2)} />
           </TrackedSection>
 
           {/* Section 2: Intro dialogue (叽里咕噜) */}
           <TrackedSection name="intro" className="w-full h-screen snap-start snap-always overflow-hidden relative bg-gradient-to-b from-[#3c7dd7] to-[#79cbf8]">
-            <SectionIntro onComplete={() => scrollToSection(3)} />
+            <SectionIntro isActive={activeSectionName === 'intro'} onComplete={() => scrollToSection(3)} />
           </TrackedSection>
 
           {/* Section 3: Parkour Gameplay（懒加载 Three.js；接近视口才挂载，Suspense 兜底） */}
@@ -283,7 +264,7 @@ export default function App() {
               ? (
                 <ParkourErrorBoundary>
                   <React.Suspense fallback={<ParkourLoading />}>
-                    <SectionParkour onComplete={() => scrollToSection(4)} />
+                    <SectionParkour isActive={activeSectionName === 'parkour'} onComplete={() => scrollToSection(4)} />
                   </React.Suspense>
                 </ParkourErrorBoundary>
               )
@@ -292,12 +273,12 @@ export default function App() {
 
           {/* Section 4: Visual Novel (月亮向导讲故事) */}
           <TrackedSection name="story" className="w-full h-screen snap-start snap-always overflow-hidden relative">
-            <SectionVisualNovel onBack={() => scrollToSection(2)} onComplete={() => scrollToSection(5)} />
+            <SectionVisualNovel isActive={activeSectionName === 'story'} onBack={() => scrollToSection(2)} onComplete={() => scrollToSection(5)} />
           </TrackedSection>
 
           {/* Section 5: Result (探险相册) */}
           <TrackedSection name="gallery" className="w-full h-screen snap-start snap-always overflow-hidden relative">
-            <SectionResult onSave={() => scrollToSection(6)} />
+            <SectionResult isActive={activeSectionName === 'gallery'} onSave={() => scrollToSection(6)} />
           </TrackedSection>
 
           {/* Section 6: Otter Egg keepsake (留存) */}

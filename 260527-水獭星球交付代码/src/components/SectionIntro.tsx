@@ -5,6 +5,7 @@ import { TapToContinueHint } from './InteractionHints';
 import shiningStarUrl from '../../shining-star.png';
 
 interface SectionIntroProps {
+  isActive?: boolean;
   onComplete: () => void;
 }
 
@@ -25,7 +26,7 @@ const CHAR_NAME = { zh: '闪闪', en: 'Sparky' };
 
 const PAUSE_CHARS = new Set(['，', ',', '。', '.', '…', '!', '！', '?', '？']);
 
-export default function SectionIntro({ onComplete }: SectionIntroProps) {
+export default function SectionIntro({ isActive, onComplete }: SectionIntroProps) {
   const { lang } = useLang();
   const lines = LINES[lang];
 
@@ -34,56 +35,57 @@ export default function SectionIntro({ onComplete }: SectionIntroProps) {
   const [done, setDone] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(containerRef, { amount: 0.5 });
+  const measuredInView = useInView(containerRef, { amount: 0.5 });
+  const isInView = isActive ?? measuredInView;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const charIndexRef = useRef(0);
 
-  const clearTimer = () => {
-    if (timerRef.current !== null) clearTimeout(timerRef.current);
-  };
+  const clearTimer = useCallback(() => {
+    if (timerRef.current === null) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+  }, []);
 
-  const typeNextChar = useCallback(() => {
-    const line = lines[lineIndex];
-    const i = charIndexRef.current;
-    if (i >= line.length) {
-      setDone(true);
-      return;
-    }
-    setDisplayed(line.slice(0, i + 1));
-    charIndexRef.current = i + 1;
-    const delay = PAUSE_CHARS.has(line[i]) ? 300 : 60;
-    timerRef.current = setTimeout(typeNextChar, delay);
-  }, [lineIndex, lines]);
-
-  // Start/reset typing when section scrolls into or out of view
-  useEffect(() => {
+  const startTyping = useCallback((line: string) => {
     clearTimer();
     charIndexRef.current = 0;
     setDisplayed('');
     setDone(false);
-    setLineIndex(0);
-    if (isInView) {
-      timerRef.current = setTimeout(typeNextChar, 60);
-    }
-    return clearTimer;
-  }, [isInView]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Restart when advancing to next line
-  useEffect(() => {
-    if (!isInView) return;
-    clearTimer();
-    charIndexRef.current = 0;
-    setDisplayed('');
-    setDone(false);
+    const typeNextChar = () => {
+      const i = charIndexRef.current;
+      if (i >= line.length) {
+        setDone(true);
+        timerRef.current = null;
+        return;
+      }
+      setDisplayed(line.slice(0, i + 1));
+      charIndexRef.current = i + 1;
+      const delay = PAUSE_CHARS.has(line[i]) ? 300 : 60;
+      timerRef.current = setTimeout(typeNextChar, delay);
+    };
+
     timerRef.current = setTimeout(typeNextChar, 60);
+  }, [clearTimer]);
+
+  useEffect(() => {
+    clearTimer();
+    if (!isInView) {
+      charIndexRef.current = 0;
+      setDisplayed('');
+      setDone(false);
+      setLineIndex(0);
+      return clearTimer;
+    }
+    startTyping(lines[lineIndex]);
     return clearTimer;
-  }, [lineIndex, typeNextChar]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clearTimer, isInView, lineIndex, lines, startTyping]);
 
   useEffect(() => {
     clearTimer();
     charIndexRef.current = 0;
     setLineIndex(0);
-  }, [lang]);
+  }, [clearTimer, lang]);
 
   const handleAdvance = () => {
     if (!done) {

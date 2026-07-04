@@ -289,16 +289,19 @@ const Hud = memo(function Hud({
 });
 
 export default function SectionVisualNovel({
+  isActive,
   onBack,
   onComplete,
 }: {
+  isActive?: boolean;
   onBack?: () => void;
   onComplete?: () => void;
 } = {}) {
   const { lang } = useLang();
   const containerRef = useRef<HTMLDivElement>(null);
   // 实时可见性（非 once）：用来闸住空格监听 / 录音态，避免别的 section 的空格污染本页。
-  const isInView = useInView(containerRef, { amount: 0.5 });
+  const measuredInView = useInView(containerRef, { amount: 0.5 });
+  const isInView = isActive ?? measuredInView;
 
   const [isRecording, setIsRecording] = useState(false);
   const voiceStartRef = useRef<number>(0); // 语音开始时间戳，用于计算单次录音时长
@@ -392,6 +395,7 @@ export default function SectionVisualNovel({
 
   // 按下麦克风：不可用(不支持/被拒)时只弹提示、不进入录音态；可用才真正开录。
   const tryStartRecording = () => {
+    if (!isInView) return;
     if (!srSupported || srDenied) { showVoiceHint(); return; }
     setIsRecording(true);
   };
@@ -459,6 +463,10 @@ export default function SectionVisualNovel({
   // 录音开/关由 isRecording 驱动（push-to-talk，卡片内嵌）：按下 → 起识别；松开 → 停识别 + 自动发送。
   // 不再亮 overlay 弹窗——语音 UI 全在卡片内。松开时若识别稿为空记一次沉默（兜底用）。
   useEffect(() => {
+    if (!isInView) {
+      srStop();
+      return;
+    }
     if (isRecording) {
       if (voiceReleaseTimerRef.current) {
         clearTimeout(voiceReleaseTimerRef.current);
@@ -485,7 +493,7 @@ export default function SectionVisualNovel({
         voiceReleaseTimerRef.current = null;
       }
     };
-  }, [isRecording]);
+  }, [isRecording, isInView, srStart, srStop]);
 
   useEffect(() => {
     srReset();
@@ -500,6 +508,7 @@ export default function SectionVisualNovel({
 
   // Global mouseup/touchend to stop recording even if mouse leaves the button
   useEffect(() => {
+    if (!isInView) return;
     const handleUp = () => setIsRecording(false);
     if (isRecording) {
       window.addEventListener('mouseup', handleUp);
@@ -509,7 +518,7 @@ export default function SectionVisualNovel({
       window.removeEventListener('mouseup', handleUp);
       window.removeEventListener('touchend', handleUp);
     };
-  }, [isRecording]);
+  }, [isRecording, isInView]);
 
   // Spacebar support — 仅本页在视野内时生效，避免跑酷页打字的空格远程触发录音
   useEffect(() => {
@@ -534,6 +543,7 @@ export default function SectionVisualNovel({
   useEffect(() => {
     if (isInView) return;
     abortRef.current?.abort();
+    srStop();
     if (voiceReleaseTimerRef.current) {
       clearTimeout(voiceReleaseTimerRef.current);
       voiceReleaseTimerRef.current = null;
