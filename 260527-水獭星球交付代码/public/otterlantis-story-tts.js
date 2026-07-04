@@ -1,5 +1,5 @@
 (function () {
-  var TTS_URL = "https://api.otterlantis.com/api/fish-tts";
+  var TTS_URL = "/api/fish-tts";
   var STORY_ROLE = "storyNarrator";
   var STORY_REFERENCE_ID = "64f3d78c5b164c13b6257a302da856e7";
 

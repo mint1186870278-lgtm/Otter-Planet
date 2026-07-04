@@ -1,5 +1,5 @@
 ﻿(function () {
-  const API_BASE = "https://api.otterlantis.com";
+  const API_BASE = "";
   const STORAGE_KEY = "otterlantis_user";
   const SESSION_KEY = "otterlantis_session_id";
   const ASSET_BASE = "/page0";
