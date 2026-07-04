@@ -14,6 +14,40 @@
 
 ## 已落地改动
 
+### 0. 首屏硬延迟完整地形请求
+
+修正点：
+
+```text
+只写 <Suspense fallback={<LowTerrainShell />}> 还不够。
+只要 <TerrainModel /> 被挂载，useGLTF(TERRAIN_URL) 仍会立刻请求 35.61 MB 完整地形。
+```
+
+当前接入方式：
+
+```tsx
+{loadFullTerrain ? (
+  <React.Suspense fallback={<LowTerrainShell />}>
+    <TerrainModel />
+  </React.Suspense>
+) : (
+  <LowTerrainShell />
+)}
+```
+
+触发时机：
+
+```text
+SectionParkour 在键盘教学完成后等待 2.5s，再把 loadFullTerrain 置为 true。
+```
+
+效果：
+
+```text
+跑酷路由首屏和键盘教学阶段不会发起 /model-site/scene-terrain-opt.glb 请求。
+用户可操作后，完整地形再作为后台增强资源下载，并在下载完成后替换低模地形。
+```
+
 ### 1. 低模首包 fallback
 
 新增组件：
@@ -29,15 +63,14 @@ export function LowTerrainShell()
 1. 不依赖任何 GLB。
 2. 直接用 Three.js primitive 画轻量草地、入口路面、石板路径和少量植被。
 3. 挂载时临时写入 occluderRef，供角色贴地、相机遮挡、NPC/障碍物/花草吸附使用。
-4. 完整 TerrainModel 加载完成后，Suspense 自动卸载 LowTerrainShell，由完整地形接管 occluderRef。
+4. 完整 TerrainModel 开始后台加载前，它是唯一地形；完整地形加载完成后，由完整地形接管 occluderRef。
 ```
 
 接入点：
 
 ```tsx
-<React.Suspense fallback={<LowTerrainShell />}>
-  <TerrainModel />
-</React.Suspense>
+loadFullTerrain=false：只挂 LowTerrainShell，不请求完整 GLB。
+loadFullTerrain=true：挂 TerrainModel，Suspense 加载期间继续显示 LowTerrainShell。
 ```
 
 位置：
