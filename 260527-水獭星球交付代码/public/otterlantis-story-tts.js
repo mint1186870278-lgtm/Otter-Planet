@@ -80,6 +80,23 @@
     setState({ status: "idle", lastError: null });
   }
 
+  function sectionNameFromEvent(event) {
+    var detail = event && event.detail ? event.detail : {};
+    if (detail.name) return detail.name;
+    if (window.__otterSectionState && window.__otterSectionState.name) {
+      return window.__otterSectionState.name;
+    }
+    if (document.body && document.body.dataset) {
+      return document.body.dataset.otterActiveSection || "";
+    }
+    return "";
+  }
+
+  function handleSectionChange(event) {
+    var sectionName = sectionNameFromEvent(event);
+    if (sectionName && sectionName !== "story") stop();
+  }
+
   function scheduleRetry(currentRequestId) {
     clearRetry();
     retryHandler = function () {
@@ -168,4 +185,6 @@
       return Object.assign({}, window.__otterlantisStoryTtsState);
     }
   };
+
+  window.addEventListener("otterlantis:section-change", handleSectionChange);
 })();

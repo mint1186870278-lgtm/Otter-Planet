@@ -87,6 +87,33 @@ function assetVersionStamp(): Plugin {
   };
 }
 
+function vendorChunkName(id: string) {
+  if (!id.includes('node_modules')) return undefined;
+  const normalized = id.replace(/\\/g, '/');
+
+  if (normalized.includes('/node_modules/react/') || normalized.includes('/node_modules/react-dom/')) {
+    return 'vendor-react';
+  }
+  if (normalized.includes('/node_modules/motion/')) return 'vendor-motion';
+  if (
+    normalized.includes('/node_modules/@react-three/fiber/') ||
+    normalized.includes('/node_modules/@react-three/drei/') ||
+    normalized.includes('/node_modules/maath/') ||
+    normalized.includes('/node_modules/meshline/') ||
+    normalized.includes('/node_modules/three-stdlib/') ||
+    normalized.includes('/node_modules/tunnel-rat/') ||
+    normalized.includes('/node_modules/use-sync-external-store/') ||
+    normalized.includes('/node_modules/zustand/')
+  ) {
+    return 'vendor-r3f-drei';
+  }
+  if (normalized.includes('/node_modules/three/examples/')) return 'vendor-three-examples';
+  if (normalized.includes('/node_modules/three/')) return 'vendor-three';
+  if (normalized.includes('/node_modules/lucide-react/')) return 'vendor-ui';
+
+  return undefined;
+}
+
 export default defineConfig(() => {
   return {
     plugins: [assetVersionStamp(), react(), tailwindcss()],
@@ -103,6 +130,17 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
       proxy: {
         '/api': 'http://localhost:6636',
+      },
+    },
+    build: {
+      // After route-level splitting, the only large JS chunk is the lazy-loaded
+      // Three.js engine. Keep a finite warning ceiling so future growth still
+      // surfaces without warning on the expected vendor engine bundle.
+      chunkSizeWarningLimit: 800,
+      rollupOptions: {
+        output: {
+          manualChunks: vendorChunkName,
+        },
       },
     },
   };

@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx src/lib/controlTutorial.test.ts && tsx src/lib/interactionHints.test.ts && tsx src/lib/fishAudio.test.ts && tsx src/lib/sectionFlow.test.ts",
+    "test": "tsx src/lib/controlTutorial.test.ts && tsx src/lib/interactionHints.test.ts && tsx src/lib/fishAudio.test.ts && tsx src/lib/sectionFlow.test.ts && tsx src/lib/publicRuntimeContract.test.ts",
     "smoke:flow": "node scripts/smoke-flow.mjs",
     "report:assets": "node scripts/report-assets.mjs",
     "bake:terrain-heightfield": "node scripts/bake-terrain-heightfield.mjs",

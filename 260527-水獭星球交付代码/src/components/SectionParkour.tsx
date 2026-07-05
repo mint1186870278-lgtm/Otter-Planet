@@ -16,71 +16,38 @@ import { MouseViewHintBubble } from './MouseViewHintBubble';
 import {
   CONTROL_TUTORIAL_DIRECTIONS,
   advanceControlTutorial,
-  keyToTutorialDirection,
   shouldPulseControlTutorialHint,
   type TutorialDirection,
 } from '../lib/controlTutorial';
 import { createFishSpeechUrl, fishVoiceRoleFromNpcIndex } from '../lib/fishAudio';
 // SectionParkour 的纯常量/类型/工具 + SceneErrorBoundary 已抽到 parkour/ 下两个文件。
 import {
-  RENDER_CONFIG, DIRECTION_TO_KEY, KEY_TO_MOVEMENT_KEY, TUTORIAL_STEP_MOVE_MS,
+  RENDER_CONFIG, DIRECTION_TO_KEY, TUTORIAL_STEP_MOVE_MS,
   STAR_GUIDE_REACH_RADIUS, NPC_PORTRAIT, computeVelocity,
   NPC_SYSTEM_PROMPTS, stripMarkers, sanitizeForDisplay, extractName, streamChat,
   type ChatMessage, type FeedbackItem,
 } from './parkour/sectionParkourCore';
 import { SceneErrorBoundary } from './parkour/SceneErrorBoundary';
+import { useParkourKeyboardControls } from './parkour/useParkourKeyboardControls';
+import { useParkourRouteReady } from './parkour/useParkourRouteReady';
+import { useParkourSmokeDriver } from './parkour/useParkourSmokeDriver';
+import { useTrackedTimeouts, type TrackedTimeout } from './parkour/useTrackedTimeouts';
 
 
 export default function SectionParkour({ isActive, onComplete }: { isActive?: boolean; onComplete?: () => void } = {}) {
   const { lang } = useLang();
   const { generateSlot } = useGallery(); // 探险相册：遇 NPC / 假月亮时并行生图
   const onCompleteRef = useRef(onComplete);
-  const timeoutHandlesRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
-  const scheduleTimeout = useCallback((callback: () => void, delay: number) => {
-    const timeout = setTimeout(() => {
-      timeoutHandlesRef.current.delete(timeout);
-      callback();
-    }, delay);
-    timeoutHandlesRef.current.add(timeout);
-    return timeout;
-  }, []);
-  const clearTrackedTimeout = useCallback((timeout: ReturnType<typeof setTimeout> | null | undefined) => {
-    if (!timeout) return;
-    clearTimeout(timeout);
-    timeoutHandlesRef.current.delete(timeout);
-  }, []);
+  const { scheduleTimeout, clearTrackedTimeout } = useTrackedTimeouts();
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
-  useEffect(() => () => {
-    timeoutHandlesRef.current.forEach(timeout => clearTimeout(timeout));
-    timeoutHandlesRef.current.clear();
-  }, []);
-
   // 场景就绪门控：chunk 下载完后 R3F Canvas + 3D 模型还在初始化，主容器只剩渐变蓝背景（蓝屏）。
   // 用 .otter-landing-wait 遮罩盖住这段空档，轮询到 canvas + 教学方向元素出现（或超时 20s）才撤遮罩。
   // 配合 public/otterlantis-loader.js：markSceneReady() 让加载进度条收尾。
-  const [routeSceneReady, setRouteSceneReady] = useState(false);
-  useEffect(() => {
-    const startAt = Date.now();
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const poll = () => {
-      const hasCanvas = !!document.querySelector('canvas');
-      const hasTutorial = !!document.querySelector('[data-tutorial-direction]');
-      if ((hasCanvas && hasTutorial) || Date.now() - startAt > 20000) {
-        timer = scheduleTimeout(() => {
-          setRouteSceneReady(true);
-          (window as { otterParkourLoading?: { markSceneReady?: () => void } }).otterParkourLoading?.markSceneReady?.();
-        }, 300);
-      } else {
-        timer = scheduleTimeout(poll, 120);
-      }
-    };
-    poll();
-    return () => clearTrackedTimeout(timer);
-  }, [clearTrackedTimeout, scheduleTimeout]);
+  const routeSceneReady = useParkourRouteReady({ clearTrackedTimeout, scheduleTimeout });
   const containerRef = useRef<HTMLDivElement>(null);
   const measuredInView = useInView(containerRef, { amount: 0.5 });
   const isInView = isActive ?? measuredInView;
@@ -98,7 +65,7 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
   const keysHeld = useRef<Set<string>>(new Set());
   const [showNudge, setShowNudge] = useState(false); // "往前走" prompt
   const nudgeShownRef = useRef(false);
-  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nudgeTimerRef = useRef<TrackedTimeout | null>(null);
   // 剧情钥匙：累计收集数，只增不减（掉星/撞障碍都不回退）。0–9，分三段每段 3 颗。
   const [totalCollected, setTotalCollected] = useState(0);
   const totalCollectedRef = useRef(0); // 与 totalCollected 同步，给 handleCollect 读最新值（避开 StrictMode 双调 updater）
@@ -163,7 +130,7 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
   const [loadFullTerrain, setLoadFullTerrain] = useState(false);
   const [showMouseHint, setShowMouseHint] = useState(false); // 键盘教学完成后弹"鼠标转视角"气泡，~6s 或拖过视角后收起
   const hasDraggedViewRef = useRef(false); // 玩家是否真的拖动过视角（学会了就不再唠叨）
-  const mouseHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mouseHintTimerRef = useRef<TrackedTimeout | null>(null);
   const [currentDirectionIndex, setCurrentDirectionIndex] = useState(0);
   const currentDirectionIndexRef = useRef(0);
   const [tutorialFlashDirection, setTutorialFlashDirection] = useState<TutorialDirection | null>(null);
@@ -172,7 +139,7 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
   const lastCorrectInputTime = useRef(Date.now());
   const lastTutorialPulseAtRef = useRef(0);
   const tutorialStepMovingRef = useRef(false);
-  const tutorialReleaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tutorialReleaseTimerRef = useRef<TrackedTimeout | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const [npcBubble, setNpcBubble] = useState<{ npcIndex: number; text: string } | null>(null);
   const [showGoHint, setShowGoHint] = useState(false);
@@ -316,6 +283,20 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
     focusCanvas();
   }, [focusCanvas]);
 
+  const completeTutorialForSmoke = useCallback(() => {
+    clearTrackedTimeout(tutorialReleaseTimerRef.current);
+    tutorialReleaseTimerRef.current = null;
+    tutorialStepMovingRef.current = false;
+    currentDirectionIndexRef.current = CONTROL_TUTORIAL_DIRECTIONS.length;
+    setCurrentDirectionIndex(CONTROL_TUTORIAL_DIRECTIONS.length);
+    setTutorialFlashDirection(null);
+    setIsControlTutorialActive(false);
+    setControlTutorialComplete(true);
+    setShowMouseHint(false);
+    releaseAllMovementKeys();
+    startFirstStarGuide();
+  }, [clearTrackedTimeout, releaseAllMovementKeys, startFirstStarGuide]);
+
   const handleTutorialDirection = useCallback((direction: TutorialDirection) => {
     if (!isControlTutorialActive || tutorialStepMovingRef.current) return;
     const now = Date.now();
@@ -442,39 +423,16 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
     return () => clearInterval(timer);
   }, [gameState, isInView, releaseAllMovementKeys]);
 
-  useEffect(() => {
-    if (!isInView) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameState !== 'tutorial' && gameState !== 'starGuide' && gameState !== 'playing') return;
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return; // 输入框打字放行
-      if (npcDialog !== null || cutsceneFreezeRef.current) { if (e.key.startsWith('Arrow')) e.preventDefault(); return; } // 对话/过场冻结
-      const movementKey = KEY_TO_MOVEMENT_KEY[e.key];
-      if (!movementKey) return;
-      e.preventDefault();
-
-      const tutorialDirection = keyToTutorialDirection(e.key);
-      if (isControlTutorialActive) {
-        if (tutorialDirection) handleTutorialDirection(tutorialDirection);
-        return;
-      }
-
-      pressMovementKey(movementKey);
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      const movementKey = KEY_TO_MOVEMENT_KEY[e.key];
-      if (!movementKey || isControlTutorialActive) return;
-      releaseMovementKey(movementKey);
-    };
-
-    window.addEventListener('keydown', handleKeyDown, { passive: false });
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [gameState, handleTutorialDirection, isControlTutorialActive, isInView, npcDialog, pressMovementKey, releaseMovementKey]);
+  useParkourKeyboardControls({
+    cutsceneFreezeRef,
+    gameState,
+    isControlTutorialActive,
+    isInView,
+    npcDialogOpen: npcDialog !== null,
+    onTutorialDirection: handleTutorialDirection,
+    pressMovementKey,
+    releaseMovementKey,
+  });
 
   // 静止 5 秒后，温和提示最近的未收集任务星；至少间隔 5 秒，避免刷屏。
   useEffect(() => {
@@ -682,6 +640,11 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
     }, 2000);
   };
 
+  const completeParkourForSmoke = useCallback(() => {
+    track('stage_complete', { stage: 'parkour', smoke: true });
+    onCompleteRef.current?.();
+  }, []);
+
   // ── ⭐ 进度条尺寸旋钮（想调大小只改 HUD_BAR_W 这一个数）──
   const HUD_BAR_W = 460;                          // 底图渲染宽度（原 200 的 ~2.3 倍）
   const HUD_BAR_H = HUD_BAR_W * (253 / 1536);     // 按原图比例 6.07:1 自动算高 ≈ 76
@@ -718,7 +681,7 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
   const voiceStartRef = useRef<number>(0); // 语音开始时间戳，用于计算单次录音时长
   // 浏览器不支持语音时：用户点了麦克风才弹提示，几秒后自动消失（平时不常驻）
   const [voiceHintShown, setVoiceHintShown] = useState(false);
-  const voiceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceHintTimerRef = useRef<TrackedTimeout | null>(null);
   const showVoiceHint = () => {
     clearTrackedTimeout(voiceHintTimerRef.current);
     setVoiceHintShown(true);
@@ -912,6 +875,25 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
 
   const currentNpc = npcDialog !== null ? NPC_DATA[npcDialog - 1] : null;
 
+  useParkourSmokeDriver({
+    closeFakeMoon,
+    closeMilestone,
+    collectOne: id => handleCollect(id, 'star'),
+    completeEnding: completeParkourForSmoke,
+    completeTutorial: completeTutorialForSmoke,
+    endingActive,
+    fakeMoonDialog,
+    finishNpcDialog: () => finishNpcDialog(true),
+    gameState,
+    isControlTutorialActive,
+    milestonePopup,
+    npcDialog,
+    openNpc: handleNpcApproach,
+    reachFakeMoon: handleFakeMoonReach,
+    routeSceneReady,
+    totalCollectedRef,
+  });
+
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden select-none bg-gradient-to-b from-[#3c7dd7] to-[#79cbf8]">
 
@@ -991,7 +973,7 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
           color: '#C8821E',
           whiteSpace: 'nowrap',
           pointerEvents: 'none',
-        }}>
+        }} data-otter-parkour-progress={`${totalCollected}/${TOTAL_STARS}`}>
           {totalCollected}/{TOTAL_STARS}
         </div>
       </motion.div>
@@ -1074,6 +1056,7 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
                     })[milestonePopup as 3 | 6 | 9]}
               </p>
               <motion.button
+                data-otter-milestone-continue
                 type="button"
                 animate={{ scale: [1, 1.04, 1] }}
                 transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
@@ -1134,6 +1117,7 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
                   : (lang === 'zh' ? '原来是石子呀！再找找吧！' : "It's just a pebble! Keep looking!")}
               </p>
               <motion.button
+                data-otter-fake-moon-continue
                 animate={{ scale: [1, 1.04, 1] }}
                 transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
                 className="kid-button-primary text-lg px-8 py-3 relative"
@@ -1279,6 +1263,7 @@ export default function SectionParkour({ isActive, onComplete }: { isActive?: bo
                       </button>
                       {/* 跳过对话：直接走收尾流程（生图/埋点/演出都不漏），给卡住的用户一个出口 */}
                       <button
+                        data-otter-npc-skip
                         className="text-xs font-bold text-gray-400 hover:text-otter-orange underline underline-offset-2 mt-1"
                         onClick={(e) => { e.preventDefault(); finishNpcDialog(true); }}
                       >

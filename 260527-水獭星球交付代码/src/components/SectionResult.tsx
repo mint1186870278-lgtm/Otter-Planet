@@ -27,6 +27,31 @@ const SLOT_META: Record<GallerySlotKey, { zh: { title: string; desc: string }; e
 const BG_LQIP = 'data:image/webp;base64,UklGRqAAAABXRUJQVlA4IJQAAABQBACdASoUAA0APu1krU2ppaSiMAgBMB2JbACdMoGvqgvBE67InkjpIV4AAP5P3zucf4gUs5RJuhUOvnGdjfYWJ02hSDKmwb+8evf739pd2d580XW9gRsnIBh33upt62zY8f9uSApfXfcXOl1oBWtN/ZyM1j1IUARnG8K8IS5SotoE5vgwZDKf3oYl+EwQBZLz8AAA';
 const BG_URL = '/Result/BG-6d82a799.webp';
 
+function ImageUnavailable({ label, compact = false }: { label: string; compact?: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-1 text-gray-400 text-center px-2">
+      <span className={compact ? 'text-2xl md:text-3xl' : 'text-4xl md:text-5xl'}>🖼️</span>
+      <span className={compact ? 'text-[10px] md:text-xs font-bold' : 'text-sm md:text-lg font-bold'}>{label}</span>
+    </div>
+  );
+}
+
+function SafeGalleryImage({
+  src,
+  alt,
+  fallbackLabel,
+  compact = false,
+}: {
+  src: string;
+  alt: string;
+  fallbackLabel: string;
+  compact?: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <ImageUnavailable label={fallbackLabel} compact={compact} />;
+  return <img src={src} alt={alt} onError={() => setFailed(true)} className="w-full h-full object-cover" />;
+}
+
 export default function SectionResult({ isActive, onSave }: { isActive?: boolean; onSave?: () => void } = {}) {
   const { lang } = useLang();
   const { gallery, generateSlot } = useGallery();
@@ -37,11 +62,19 @@ export default function SectionResult({ isActive, onSave }: { isActive?: boolean
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [bgLoaded, setBgLoaded] = useState(false);
+  const [bgFailed, setBgFailed] = useState(false);
   const bgImgRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     const img = new Image();
-    img.onload = () => setBgLoaded(true);
+    img.onload = () => {
+      setBgFailed(false);
+      setBgLoaded(true);
+    };
+    img.onerror = () => {
+      setBgFailed(true);
+      setBgLoaded(true);
+    };
     img.src = BG_URL;
     bgImgRef.current = img;
   }, []);
@@ -66,8 +99,8 @@ export default function SectionResult({ isActive, onSave }: { isActive?: boolean
   }, [isPlaying, isInView]);
 
   const t = {
-    zh: { complete: '冒险完成！', home: '回到主页', save: '珍藏\n回忆', loading: '正在画…', failed: '生成失败', retry: '重新生成', waiting: '还没画哦' },
-    en: { complete: 'Adventure Complete!', home: 'Home', save: 'Save\nMemory', loading: 'Drawing…', failed: 'Failed', retry: 'Retry', waiting: 'Not yet' },
+    zh: { complete: '冒险完成！', home: '回到主页', save: '珍藏\n回忆', loading: '正在画…', failed: '生成失败', imageUnavailable: '图片未加载', retry: '重新生成', waiting: '还没画哦' },
+    en: { complete: 'Adventure Complete!', home: 'Home', save: 'Save\nMemory', loading: 'Drawing…', failed: 'Failed', imageUnavailable: 'Image unavailable', retry: 'Retry', waiting: 'Not yet' },
   }[lang];
 
   const selectedWide = gallery[selectedKey].wide; // 右侧大图用横图
@@ -80,12 +113,20 @@ export default function SectionResult({ isActive, onSave }: { isActive?: boolean
       {/* 渐进背景：LQIP blur → 全尺寸 WebP 淡入 */}
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url('${BG_LQIP}')`, filter: bgLoaded ? 'none' : 'blur(8px)', transition: 'none' }}
+        style={{
+          backgroundImage: bgFailed
+            ? 'linear-gradient(135deg, #ffe0a6 0%, #8fd5f7 52%, #5bb7d9 100%)'
+            : `url('${BG_LQIP}')`,
+          filter: bgLoaded ? 'none' : 'blur(8px)',
+          transition: 'none',
+        }}
       />
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url('${BG_URL}')`, opacity: bgLoaded ? 1 : 0, transition: 'opacity 0.6s ease' }}
-      />
+      {!bgFailed && (
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url('${BG_URL}')`, opacity: bgLoaded ? 1 : 0, transition: 'opacity 0.6s ease' }}
+        />
+      )}
 
       {/* Audio Bar */}
       <motion.div
@@ -174,7 +215,7 @@ export default function SectionResult({ isActive, onSave }: { isActive?: boolean
                     </div>
 
                     {thumb.status === 'done' && thumb.url ? (
-                      <img src={thumb.url} alt={meta.title} className="w-full h-full object-cover" />
+                      <SafeGalleryImage src={thumb.url} alt={meta.title} fallbackLabel={t.imageUnavailable} compact />
                     ) : thumb.status === 'loading' ? (
                       <div className="flex flex-col items-center justify-center gap-1 text-otter-orange">
                         <Loader2 className="w-6 h-6 md:w-8 md:h-8 animate-spin" />
@@ -233,7 +274,7 @@ export default function SectionResult({ isActive, onSave }: { isActive?: boolean
               <div className="relative w-full max-w-[100%] md:max-w-[100%] aspect-[4/3] bg-white p-2 md:p-3 rounded-[16px] md:rounded-[24px] shadow-md mb-4 md:mb-6">
                 <div className="w-full h-full rounded-[10px] md:rounded-[16px] overflow-hidden bg-gray-100 flex items-center justify-center">
                   {selectedWide.status === 'done' && selectedWide.url ? (
-                    <img src={selectedWide.url} alt={selectedMeta.title} className="w-full h-full object-cover" />
+                    <SafeGalleryImage src={selectedWide.url} alt={selectedMeta.title} fallbackLabel={t.imageUnavailable} />
                   ) : selectedWide.status === 'loading' ? (
                     <div className="flex flex-col items-center justify-center gap-2 text-otter-orange">
                       <Loader2 className="w-10 h-10 md:w-14 md:h-14 animate-spin" />

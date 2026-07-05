@@ -14,6 +14,19 @@ import { track, trackBeacon, trackOnce, setTrackLang, type SectionName } from '.
 import { LangContext, type Language } from './lib/lang';
 import { SECTION_COUNT, readPendingSectionIndex, rememberPendingSectionIndex, sectionNameAt } from './lib/sectionFlow';
 
+declare global {
+  interface Window {
+    __otterAppSmoke?: {
+      goToSection: (index: number) => { activeSectionIndex: number; activeSectionName: string };
+      state: () => { activeSectionIndex: number; activeSectionName: string };
+    };
+    __otterSectionState?: {
+      index: number;
+      name: SectionName;
+    };
+  }
+}
+
 // 错误边界：兜住 React.lazy(SectionParkour) 加载失败（chunk 404 / 网络断开）。
 // 无此边界时，import() 的 rejected Promise 会无声地崩溃整个 React 树，
 // 全局 loading overlay 永远停在 45%，markSceneReady() 永远不会被调用。
@@ -143,8 +156,16 @@ export default function App() {
   const [lang, setLang] = useState<Language>(() =>
     new URLSearchParams(window.location.search).get('lang')?.toLowerCase() === 'en' ? 'en' : 'zh'
   );
+  const [isSmokeTest] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).has('test');
+    } catch {
+      return false;
+    }
+  });
   const [activeSectionIndex, setActiveSectionIndex] = useState(readPendingSectionIndex);
   const activeSectionName = sectionNameAt(activeSectionIndex);
+  const activeSectionOffsetPercent = (activeSectionIndex * 100) / SECTION_COUNT;
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // 跑酷 section 的「接近视口」门控：滚到 intro(前一屏)附近就触发，提前加载 Three.js chunk。
@@ -157,11 +178,23 @@ export default function App() {
   useEffect(() => { setTrackLang(lang); }, [lang]);
 
   useEffect(() => {
+    const sectionState = { index: activeSectionIndex, name: activeSectionName };
     document.body.dataset.otterActiveSection = activeSectionName;
+    document.body.dataset.otterActiveSectionIndex = String(activeSectionIndex);
+    window.__otterSectionState = sectionState;
+    window.dispatchEvent(new CustomEvent('otterlantis:section-change', { detail: sectionState }));
     return () => {
-      delete document.body.dataset.otterActiveSection;
+      if (window.__otterSectionState === sectionState) {
+        delete window.__otterSectionState;
+      }
+      if (document.body.dataset.otterActiveSection === activeSectionName) {
+        delete document.body.dataset.otterActiveSection;
+      }
+      if (document.body.dataset.otterActiveSectionIndex === String(activeSectionIndex)) {
+        delete document.body.dataset.otterActiveSectionIndex;
+      }
     };
-  }, [activeSectionName]);
+  }, [activeSectionIndex, activeSectionName]);
 
   // 流程开始（漏斗起点），整局只报一次。用 trackOnce：即便组件重挂也不会重复计数。
   useEffect(() => { trackOnce('game_start'); }, []);
@@ -227,6 +260,29 @@ export default function App() {
     setActiveSectionIndex(current => (next === current ? current : next));
   };
 
+  useEffect(() => {
+    try {
+      if (!new URLSearchParams(window.location.search).has('test')) return;
+    } catch {
+      return;
+    }
+    const state = () => ({ activeSectionIndex, activeSectionName });
+    const driver = {
+      goToSection: (index: number) => {
+        const next = rememberPendingSectionIndex(index);
+        setActiveSectionIndex(next);
+        return state();
+      },
+      state,
+    };
+    window.__otterAppSmoke = driver;
+    return () => {
+      if (window.__otterAppSmoke === driver) {
+        delete window.__otterAppSmoke;
+      }
+    };
+  }, [activeSectionIndex, activeSectionName]);
+
   return (
     <LangContext.Provider value={{ lang, toggleLang }}>
       <GalleryProvider>
@@ -237,10 +293,10 @@ export default function App() {
         >
           <div
             ref={containerRef}
-            className="w-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+            className={`w-full will-change-transform ${isSmokeTest ? '' : 'transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]'}`}
             style={{
               height: `${SECTION_COUNT * 100}vh`,
-              transform: `translate3d(0, -${activeSectionIndex * 100}vh, 0)`,
+              transform: `translate3d(0, -${activeSectionOffsetPercent}%, 0)`,
             }}
           >
           {/* Section 0: Main Menu */}

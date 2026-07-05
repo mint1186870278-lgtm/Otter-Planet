@@ -5,6 +5,8 @@
   const ASSET_BASE = "/page0";
   const NICKNAMES_ZH = ["月亮小水獭", "星星探险家", "海草观察员", "蓝莓小队长", "贝壳收藏家"];
   const NICKNAMES_EN = ["Moon Otter", "Star Explorer", "Shell Keeper", "Blueberry Buddy", "Tiny Captain"];
+  let memorySessionId = null;
+  let memoryUser = null;
 
   const VIEWS = {
     identity: "identity",
@@ -142,25 +144,58 @@
     return asset(getLang() === "en" ? enPath : zhPath);
   }
 
-  function getSessionId() {
-    let sid = localStorage.getItem(SESSION_KEY);
-    if (!sid) {
-      sid = "sess_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
-      localStorage.setItem(SESSION_KEY, sid);
-    }
-    return sid;
-  }
-
-  function getStoredUser() {
+  function safeStorageGet(key) {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      return window.localStorage ? window.localStorage.getItem(key) : null;
     } catch (e) {
       return null;
     }
   }
 
+  function safeStorageSet(key, value) {
+    try {
+      if (!window.localStorage) return false;
+      window.localStorage.setItem(key, value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function safeStorageRemove(key) {
+    try {
+      if (window.localStorage) window.localStorage.removeItem(key);
+    } catch (e) {}
+  }
+
+  function createSessionId() {
+    return "sess_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+  }
+
+  function getSessionId() {
+    let sid = safeStorageGet(SESSION_KEY) || memorySessionId;
+    if (!sid) {
+      sid = createSessionId();
+      safeStorageSet(SESSION_KEY, sid);
+    }
+    memorySessionId = sid;
+    return sid;
+  }
+
+  function getStoredUser() {
+    const raw = safeStorageGet(STORAGE_KEY);
+    if (!raw) return memoryUser;
+    try {
+      memoryUser = JSON.parse(raw);
+      return memoryUser;
+    } catch (e) {
+      return memoryUser;
+    }
+  }
+
   function saveUser(user) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    memoryUser = user;
+    safeStorageSet(STORAGE_KEY, JSON.stringify(user));
     window.otterlantisUser = user;
   }
 
@@ -197,8 +232,10 @@
   }
 
   function clearUser() {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(SESSION_KEY);
+    safeStorageRemove(STORAGE_KEY);
+    safeStorageRemove(SESSION_KEY);
+    memorySessionId = null;
+    memoryUser = null;
     window.otterlantisUser = null;
   }
 

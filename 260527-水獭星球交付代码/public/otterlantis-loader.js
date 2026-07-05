@@ -271,7 +271,8 @@
   // Without this, the 13+ GLB model downloads are invisible to the XHR interceptor above,
   // causing the progress bar to freeze at ~45% (only fast CSS/JS/webp assets counted).
   const _nativeFetch = window.fetch;
-  if (typeof _nativeFetch === 'function') {
+  if (typeof _nativeFetch === 'function' && !window.__otterLoaderFetchPatched) {
+    window.__otterLoaderFetchPatched = true;
     window.fetch = function(input, init) {
       const url = typeof input === 'string' ? input
         : (input && typeof input === 'object' && 'url' in input) ? input.url

@@ -4,6 +4,7 @@
   var GAMEPLAY_START_SECTION = 3;
   var FADE_MS = 500;
   var TARGET_VOLUME = 0.45;
+  var SECTION_NAMES = ["main", "storybook", "intro", "parkour", "story", "gallery", "egg"];
 
   var tracks = {
     opening: createTrack(OPENING_AUDIO, "opening"),
@@ -219,11 +220,64 @@
     requestPlay(getDesiredTrackName());
   }
 
+  function normalizeSectionIndex(index) {
+    if (index === null || index === undefined || index === "") return null;
+    var next = Number(index);
+    if (!Number.isFinite(next)) return null;
+    next = Math.round(next);
+    if (next < 0 || next >= SECTION_NAMES.length) return null;
+    return next;
+  }
+
+  function sectionIndexFromName(name) {
+    var index = SECTION_NAMES.indexOf(name);
+    return index === -1 ? null : index;
+  }
+
+  function readReactSectionIndex() {
+    var state = window.__otterSectionState;
+    if (state) {
+      var stateIndex = normalizeSectionIndex(state.index);
+      if (stateIndex !== null) return stateIndex;
+      var stateNameIndex = sectionIndexFromName(state.name);
+      if (stateNameIndex !== null) return stateNameIndex;
+    }
+
+    if (!document.body || !document.body.dataset) return null;
+    var datasetIndex = normalizeSectionIndex(document.body.dataset.otterActiveSectionIndex);
+    if (datasetIndex !== null) return datasetIndex;
+    return sectionIndexFromName(document.body.dataset.otterActiveSection);
+  }
+
+  function applySectionIndex(index) {
+    var nextIndex = normalizeSectionIndex(index);
+    if (nextIndex === null) return false;
+
+    var changed = lastSectionIndex !== nextIndex;
+    lastSectionIndex = nextIndex;
+    setAudioState({ lastSectionIndex: lastSectionIndex });
+    if (changed) syncMusicToCurrentSection();
+    return true;
+  }
+
+  function handleReactSectionChange(event) {
+    var detail = event && event.detail ? event.detail : {};
+    var nextIndex = normalizeSectionIndex(detail.index);
+    if (nextIndex === null) nextIndex = sectionIndexFromName(detail.name);
+    applySectionIndex(nextIndex);
+  }
+
   function getGameSections() {
     return Array.prototype.slice.call(document.querySelectorAll("#root [data-otter-game-section]"));
   }
 
   function updateByScrollPosition() {
+    var reactIndex = readReactSectionIndex();
+    if (reactIndex !== null) {
+      applySectionIndex(reactIndex);
+      return;
+    }
+
     var sections = getGameSections();
     if (!sections.length) return;
 
@@ -234,15 +288,7 @@
       return distance < best.distance ? { index: index, distance: distance } : best;
     }, { index: 0, distance: Infinity });
 
-    if (lastSectionIndex !== closest.index) {
-      lastSectionIndex = closest.index;
-      setAudioState({ lastSectionIndex: lastSectionIndex });
-      syncMusicToCurrentSection();
-      return;
-    }
-
-    lastSectionIndex = closest.index;
-    setAudioState({ lastSectionIndex: lastSectionIndex });
+    applySectionIndex(closest.index);
   }
 
   function setupObserver() {
@@ -255,16 +301,19 @@
     }
 
     observer = new IntersectionObserver(function (entries) {
+      var reactIndex = readReactSectionIndex();
+      if (reactIndex !== null) {
+        applySectionIndex(reactIndex);
+        return;
+      }
+
       var visible = entries
         .filter(function (entry) { return entry.isIntersecting; })
         .sort(function (a, b) { return b.intersectionRatio - a.intersectionRatio; })[0];
 
       if (!visible) return;
       var nextIndex = sections.indexOf(visible.target);
-      if (nextIndex === lastSectionIndex) return;
-      lastSectionIndex = nextIndex;
-      setAudioState({ lastSectionIndex: lastSectionIndex });
-      syncMusicToCurrentSection();
+      applySectionIndex(nextIndex);
     }, { threshold: [0.45, 0.6, 0.75] });
 
     sections.forEach(function (section) { observer.observe(section); });
@@ -338,6 +387,7 @@
     attachUnlockListeners();
     warmupAndTryAutoplay();
 
+    window.addEventListener("otterlantis:section-change", handleReactSectionChange);
     window.addEventListener("scroll", updateByScrollPosition, true);
     window.addEventListener("resize", updateByScrollPosition);
     window.addEventListener("otterlantis:lang-change", refreshToggleButton);

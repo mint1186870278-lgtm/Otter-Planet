@@ -5,6 +5,15 @@ import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { streamChat, stripAllBrackets, sanitizeAllBracketsForDisplay, type ChatMessage } from '../lib/stepfunChat';
 import { track } from '../lib/analytics';
 
+declare global {
+  interface Window {
+    __otterStorySmoke?: {
+      complete: () => { progress: number; stars: number; step: number };
+      state: () => { progress: number; stars: number; step: number };
+    };
+  }
+}
+
 // 月亮向导（互动四 · 讲故事）System Prompt —— 风格与跑酷三 NPC 一致，跟随 App 语言
 const MOON_GUIDE_SYSTEM = {
   zh: '你是月亮向导，温柔温暖的大向导，陪小朋友一起回顾这趟寻月冒险。小朋友刚找到真月亮，现在请他用自己的话把冒险讲一讲。【最重要·只说一句话】你每次回复【只能是一句话】，要短、口语、温柔，绝对不能出现两句或更多。【第一轮】不管小朋友说了什么、说得多短、对不对，你都只回一句【轻松的追问】，引导他往下讲一个还没讲到的情节即可——不要先夸再问、不要说两件事，就一句问句。【绝对不要问"最先/第一个遇到谁"或啄木鸟相关】——这个问题前面已经单独问过了，再问就重复了。请聚焦后半段情节来追问，例：「后来有只小鸟给你指路，结果对不对呀？」或「你顺着它指的方向，找到的是真月亮吗？」或「最后是谁帮你找到真月亮的呢？」。绝对不能把"把故事讲一遍/讲给我听"这种笼统的话再说一遍。故事里的关键情节供你参考（不要一次全说、也别再提啄木鸟）：一只小鸟指错了方向、结果找到假月亮、最后叽里咕噜帮忙找到真月亮。每句话不超过25字，温柔鼓励，不能让小朋友难过，不能有不适合儿童的内容，中文。回复必须是自然口语的一句话，不许出现方括号 [] 或 【】 及其中内容。',
@@ -353,10 +362,7 @@ export default function SectionVisualNovel({
   const [pickResult, setPickResult] = useState<'idle' | 'right' | 'wrong' | 'revealed'>('idle');
   const [pickSelected, setPickSelected] = useState<string | null>(null); // 当前高亮的卡 id（对/揭晓时）
 
-  // AI 对话状态（与跑酷 NPC 同结构：system + 开场白 assistant + 往返历史）
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [dialogComplete, setDialogComplete] = useState(false); // 检测到 [COMPLETE] 后出"继续"
   const abortRef = useRef<AbortController | null>(null);
 
   // 语音识别（Web Speech API）。zh→zh-CN / en→en-US。
@@ -401,7 +407,6 @@ export default function SectionVisualNovel({
   };
 
   useEffect(() => {
-    setDialogComplete(false);
     setIsStreaming(false);
     setVoiceAnswering(false); // 每进新步复位回复态 → 语音步回到「等待录音」UI
     setStepAnswered(false);   // 复位「答完」标记 → 新步默认不出继续按钮(由各步逻辑再点亮)
@@ -552,7 +557,6 @@ export default function SectionVisualNovel({
     setIsStreaming(false);
     setVoiceAnswering(false);
     setStepAnswered(false);
-    setDialogComplete(false);
     setStoryPrompt('');
     storyRoundRef.current = 0;
     storyHistoryRef.current = [];
@@ -683,37 +687,6 @@ export default function SectionVisualNovel({
     }
   };
 
-  // 发送识别稿 → 流式接 AI 回复（显示在对话框）→ 检测 [COMPLETE] 出"继续"。（⑩完整故事 Phase 4 复用）
-  const handleSend = async () => {
-    const text = recognizedText.trim();
-    if (!text || isStreaming) return;
-    // 打断还没播完的开场白打字机
-    if (openingIntervalRef.current) { clearInterval(openingIntervalRef.current); openingIntervalRef.current = null; }
-
-    const history: ChatMessage[] = [...messages, { role: 'user', content: text }];
-    setMessages(history);
-    setIsStreaming(true);
-    setDisplayedDialogText('');
-    srStop();
-    srReset();
-
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    try {
-      const full = await streamChat(history, partial => setDisplayedDialogText(sanitizeAllBracketsForDisplay(partial)), controller.signal);
-      setDisplayedDialogText(stripAllBrackets(full));
-      // 历史里也存去括号版：避免模型看到自己漏出的 [情节] 标注后照样复读
-      setMessages(prev => [...prev, { role: 'assistant', content: stripAllBrackets(full) }]);
-      if (full.includes('[COMPLETE]')) setDialogComplete(true);
-    } catch (err) {
-      if ((err as Error)?.name === 'AbortError') return; // 已离开/打断，静默
-      setDisplayedDialogText(lang === 'zh' ? '让我想想……再跟我说一次吧！' : 'Let me think… tell me again!');
-    } finally {
-      setIsStreaming(false);
-    }
-  };
-
   // 🎬 步骤机驱动：推进到下一步。离开「progressOn」步时点亮一格进度条（只升不降，一定走得到终点）。
   // grantStar 仅用于语义/埋点：语音/选图步的⭐已在各自逻辑里给；沉默兜底 advance(false) 表示「不给⭐但照常推进」。
   // 「答完出按钮」决策后：voice④/pick⑥/⑧ 答完会就地显示 AI 夸奖+继续按钮，那段夸奖正是 affirm⑤⑦ 的内容，
@@ -736,6 +709,28 @@ export default function SectionVisualNovel({
     }
     setStep(next);
   };
+
+  useEffect(() => {
+    try {
+      if (!new URLSearchParams(window.location.search).has('test')) return;
+    } catch {
+      return;
+    }
+    const driver = {
+      complete: () => {
+        track('stage_complete', { stage: 'story', smoke: true });
+        onComplete?.();
+        return { progress, stars, step };
+      },
+      state: () => ({ progress, stars, step }),
+    };
+    window.__otterStorySmoke = driver;
+    return () => {
+      if (window.__otterStorySmoke === driver) {
+        delete window.__otterStorySmoke;
+      }
+    };
+  }, [onComplete, progress, stars, step]);
 
   // 🖼 选图步(⑥⑧)判定（本地，不调 AI）：
   //   第一次点对 → 高亮正解 + ⭐ + 进度，停留后自动滑下一步。
@@ -764,10 +759,6 @@ export default function SectionVisualNovel({
       }
     }
   };
-
-  // ⚠️ 保活引用让 tsc(noUnusedLocals) 通过。dialogComplete/handleSend 仍是旧版残留(⑩多轮曾用 handleSend)，
-  //    Phase 6 收尾时连同 handleSend 一并删除。语音不支持提示(srSupported/srReason/showVoiceHint)已真正接入 UI。
-  void (dialogComplete || handleSend);
 
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-[#1E3A8A]">
